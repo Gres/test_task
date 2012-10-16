@@ -75,7 +75,7 @@
 })();
 
 window.require.define({"application": function(exports, require, module) {
-  var Application, Chaplin, HeaderController, Layout, SessionController, mediator, routes,
+  var Application, Chaplin, Layout, SessionController, StorageController, mediator, routes,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -87,7 +87,7 @@ window.require.define({"application": function(exports, require, module) {
 
   SessionController = require('controllers/session_controller');
 
-  HeaderController = require('controllers/header_controller');
+  StorageController = require('controllers/storage_controller');
 
   Layout = require('views/layout');
 
@@ -107,7 +107,9 @@ window.require.define({"application": function(exports, require, module) {
       this.initLayout();
       this.initMediator();
       this.initControllers();
-      this.initRouter(routes);
+      this.initRouter(routes, {
+        pushState: false
+      });
       return typeof Object.freeze === "function" ? Object.freeze(this) : void 0;
     };
 
@@ -119,17 +121,64 @@ window.require.define({"application": function(exports, require, module) {
 
     Application.prototype.initControllers = function() {
       new SessionController();
-      return new HeaderController();
+      return new StorageController();
     };
 
     Application.prototype.initMediator = function() {
       Chaplin.mediator.user = null;
+      Chaplin.mediator.banners = null;
       return Chaplin.mediator.seal();
     };
 
     return Application;
 
   })(Chaplin.Application);
+  
+}});
+
+window.require.define({"controllers/banners_controller": function(exports, require, module) {
+  var BannerItem, BannersController, Controller, mediator,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Controller = require('controllers/base/controller');
+
+  BannerItem = require('views/banners');
+
+  mediator = require('mediator');
+
+  module.exports = BannersController = (function(_super) {
+
+    __extends(BannersController, _super);
+
+    function BannersController() {
+      return BannersController.__super__.constructor.apply(this, arguments);
+    }
+
+    BannersController.prototype.historyURL = 'banners';
+
+    BannersController.prototype.index = function() {
+      this.collection = mediator.banners;
+      console.info(this.collection);
+      this.view = new BannerItem({
+        collection: this.collection
+      });
+      return this.collection.add({
+        name: "test",
+        time_start: null,
+        time_end: null,
+        hours: null,
+        countries: null,
+        platforms: null,
+        vendor: null,
+        counter: null,
+        price: null
+      });
+    };
+
+    return BannersController;
+
+  })(Controller);
   
 }});
 
@@ -151,70 +200,6 @@ window.require.define({"controllers/base/controller": function(exports, require,
     return Controller;
 
   })(Chaplin.Controller);
-  
-}});
-
-window.require.define({"controllers/header_controller": function(exports, require, module) {
-  var Controller, Header, HeaderController, HeaderView, mediator,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  Controller = require('controllers/base/controller');
-
-  mediator = require('mediator');
-
-  Header = require('models/header');
-
-  HeaderView = require('views/header_view');
-
-  module.exports = HeaderController = (function(_super) {
-
-    __extends(HeaderController, _super);
-
-    function HeaderController() {
-      return HeaderController.__super__.constructor.apply(this, arguments);
-    }
-
-    HeaderController.prototype.initialize = function() {
-      HeaderController.__super__.initialize.apply(this, arguments);
-      this.model = new Header();
-      return this.view = new HeaderView({
-        model: this.model
-      });
-    };
-
-    return HeaderController;
-
-  })(Controller);
-  
-}});
-
-window.require.define({"controllers/home_controller": function(exports, require, module) {
-  var Controller, HomeController, HomePageView,
-    __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
-
-  Controller = require('controllers/base/controller');
-
-  HomePageView = require('views/home_page_view');
-
-  module.exports = HomeController = (function(_super) {
-
-    __extends(HomeController, _super);
-
-    function HomeController() {
-      return HomeController.__super__.constructor.apply(this, arguments);
-    }
-
-    HomeController.prototype.historyURL = 'home';
-
-    HomeController.prototype.index = function() {
-      return this.view = new HomePageView();
-    };
-
-    return HomeController;
-
-  })(Controller);
   
 }});
 
@@ -359,6 +344,38 @@ window.require.define({"controllers/session_controller": function(exports, requi
     };
 
     return SessionController;
+
+  })(Controller);
+  
+}});
+
+window.require.define({"controllers/storage_controller": function(exports, require, module) {
+  var Banners, Controller, StorageController, mediator,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Controller = require('controllers/base/controller');
+
+  mediator = require('mediator');
+
+  Banners = require('models/banners');
+
+  module.exports = StorageController = (function(_super) {
+
+    __extends(StorageController, _super);
+
+    function StorageController() {
+      return StorageController.__super__.constructor.apply(this, arguments);
+    }
+
+    StorageController.prototype.initialize = function() {
+      StorageController.__super__.initialize.apply(this, arguments);
+      this.collection = new Banners();
+      this.collection.fetch();
+      return mediator.banners = this.collection;
+    };
+
+    return StorageController;
 
   })(Controller);
   
@@ -651,6 +668,65 @@ window.require.define({"mediator": function(exports, require, module) {
   
 }});
 
+window.require.define({"models/banner": function(exports, require, module) {
+  var Banner, Model,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Model = require('models/base/model');
+
+  module.exports = Banner = (function(_super) {
+
+    __extends(Banner, _super);
+
+    function Banner() {
+      return Banner.__super__.constructor.apply(this, arguments);
+    }
+
+    Banner.prototype.defaults = {
+      time_start: null,
+      time_end: null,
+      hours: null,
+      countries: null,
+      platforms: null,
+      vendor: null,
+      counter: null,
+      price: null
+    };
+
+    return Banner;
+
+  })(Model);
+  
+}});
+
+window.require.define({"models/banners": function(exports, require, module) {
+  var Banner, Banners, Collection,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Collection = require('models/base/collection');
+
+  Banner = require('models/banner');
+
+  module.exports = Banners = (function(_super) {
+
+    __extends(Banners, _super);
+
+    function Banners() {
+      return Banners.__super__.constructor.apply(this, arguments);
+    }
+
+    Banners.prototype.localStorage = new Backbone.LocalStorage("Banners");
+
+    Banners.prototype.model = Banner;
+
+    return Banners;
+
+  })(Collection);
+  
+}});
+
 window.require.define({"models/base/collection": function(exports, require, module) {
   var Chaplin, Collection,
     __hasProp = {}.hasOwnProperty,
@@ -708,24 +784,6 @@ window.require.define({"models/header": function(exports, require, module) {
       return Header.__super__.constructor.apply(this, arguments);
     }
 
-    Header.prototype.defaults = {
-      items: [
-        {
-          href: '/test/',
-          title: 'App Tests'
-        }, {
-          href: 'http://brunch.readthedocs.org/',
-          title: 'Docs'
-        }, {
-          href: 'https://github.com/brunch/brunch/issues',
-          title: 'Github Issues'
-        }, {
-          href: 'https://github.com/paulmillr/ostio',
-          title: 'Ost.io Example App'
-        }
-      ]
-    };
-
     return Header;
 
   })(Model);
@@ -756,8 +814,74 @@ window.require.define({"models/user": function(exports, require, module) {
 window.require.define({"routes": function(exports, require, module) {
   
   module.exports = function(match) {
-    return match('', 'home#index');
+    match('', 'banners#index');
+    return match('banners', 'banners#index');
   };
+  
+}});
+
+window.require.define({"views/banner_item": function(exports, require, module) {
+  var BannerItem, View, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/banner_item');
+
+  module.exports = BannerItem = (function(_super) {
+
+    __extends(BannerItem, _super);
+
+    function BannerItem() {
+      return BannerItem.__super__.constructor.apply(this, arguments);
+    }
+
+    BannerItem.prototype.template = template;
+
+    BannerItem.prototype.autoRender = true;
+
+    return BannerItem;
+
+  })(View);
+
+  collectionView;
+
+  
+}});
+
+window.require.define({"views/banners": function(exports, require, module) {
+  var Banner, BannersView, CollectionView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  CollectionView = require('views/base/collection_view');
+
+  Banner = require('views/banner_item');
+
+  template = require('views/templates/banners');
+
+  module.exports = BannersView = (function(_super) {
+
+    __extends(BannersView, _super);
+
+    function BannersView() {
+      return BannersView.__super__.constructor.apply(this, arguments);
+    }
+
+    BannersView.prototype.itemView = Banner;
+
+    BannersView.prototype.template = template;
+
+    BannersView.prototype.listSelector = '#bannersPH';
+
+    BannersView.prototype.container = '#page-container';
+
+    BannersView.prototype.autoRender = true;
+
+    return BannersView;
+
+  })(CollectionView);
   
 }});
 
@@ -1025,13 +1149,51 @@ window.require.define({"views/login_view": function(exports, require, module) {
     };
 
     LoginView.prototype.serviceProviderFailed = function(serviceProviderName) {
-      return this.$("." + serviceProviderName).removeClass('service-loading').addClass('service-unavailable').attr('disabled', true).attr('title', "Error connecting. Please check whether you areblocking " + (utils.upcase(serviceProviderName)) + ".");
+      return this.$("." + serviceProviderName).removeClass('service-loading').addClass('service-unavailable').attr('disabled', true).attr('title', "Error connecting. Please check whether you are			blocking " + (utils.upcase(serviceProviderName)) + ".");
     };
 
     return LoginView;
 
   })(View);
   
+}});
+
+window.require.define({"views/templates/banner": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var buffer = "", foundHelper, self=this;
+
+
+    return buffer;});
+}});
+
+window.require.define({"views/templates/banner_item": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var buffer = "", stack1, foundHelper, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
+
+
+    buffer += "<td>";
+    foundHelper = helpers.id;
+    stack1 = foundHelper || depth0.id;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "id", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td>";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>";
+    return buffer;});
+}});
+
+window.require.define({"views/templates/banners": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "<h3>Banners:</h3>\n<table>\n	<caption>Banners view</caption>\n	<thead>\n	<tr>\n		<th>Id</th>\n		<th>Name</th>\n	</tr>\n	</thead>\n	<tbody id=\"bannersPH\">\n\n	</tbody>\n</table>\n\n";});
 }});
 
 window.require.define({"views/templates/header": function(exports, require, module) {
@@ -1042,7 +1204,7 @@ window.require.define({"views/templates/header": function(exports, require, modu
   function program1(depth0,data) {
     
     var buffer = "", stack1;
-    buffer += "\n  <a class=\"header-link\" href=\"";
+    buffer += "<a class=\"header-link\" href=\"";
     foundHelper = helpers.href;
     stack1 = foundHelper || depth0.href;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
@@ -1052,7 +1214,7 @@ window.require.define({"views/templates/header": function(exports, require, modu
     stack1 = foundHelper || depth0.title;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</a>\n";
+    buffer += escapeExpression(stack1) + "</a>";
     return buffer;}
 
     foundHelper = helpers.items;
@@ -1073,7 +1235,7 @@ window.require.define({"views/templates/home": function(exports, require, module
     var foundHelper, self=this;
 
 
-    return "<a href=\"http://brunch.io/\">\n  <img src=\"http://brunch.io/images/brunch.png\" alt=\"Brunch\" />\n</a>\n";});
+    return "<a href=\"http://brunch.io/\"> <img src=\"http://brunch.io/images/brunch.png\" alt=\"Brunch\" /> </a>\n";});
 }});
 
 window.require.define({"views/templates/login": function(exports, require, module) {

@@ -74,6 +74,38 @@
   globals.require.brunch = true;
 })();
 
+window.require.define({"test/controllers/banners_controller_test": function(exports, require, module) {
+  var Banners;
+
+  Banners = require('models/banners');
+
+  describe('Banners', function() {
+    return beforeEach(function() {
+      return this.model = new Banners();
+    });
+  });
+  
+}});
+
+window.require.define({"test/models/banner": function(exports, require, module) {
+  var Banner;
+
+  Banner = require('models/banner');
+
+  describe('Banner', function() {
+    return beforeEach(function() {
+      return this.model = new Banner();
+    });
+  });
+  
+}});
+
+window.require.define({"test/models/banners_test": function(exports, require, module) {
+  
+
+  
+}});
+
 window.require.define({"test/models/header_test": function(exports, require, module) {
   var Header;
 
@@ -106,6 +138,19 @@ window.require.define({"test/test-helpers": function(exports, require, module) {
     expect: chai.expect,
     sinon: require('sinon')
   };
+  
+}});
+
+window.require.define({"test/views/banner_view": function(exports, require, module) {
+  var BannerItem;
+
+  BannerItem = require('views/banner_view');
+
+  describe('BannerItem', function() {
+    return beforeEach(function() {
+      return this.view = new BannerItem();
+    });
+  });
   
 }});
 
@@ -181,6 +226,8 @@ window.require.define({"test/views/home_page_view_test": function(exports, requi
   
 }});
 
+window.require('test/controllers/banners_controller_test');
+window.require('test/models/banners_test');
 window.require('test/models/header_test');
 window.require('test/views/header_view_test');
 window.require('test/views/home_page_view_test');

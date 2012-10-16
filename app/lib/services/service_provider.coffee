@@ -3,36 +3,36 @@ Chaplin = require 'chaplin'
 
 module.exports = class ServiceProvider
 
-  # Mixin a Subscriber
-  _(@prototype).extend Chaplin.Subscriber
+# Mixin a Subscriber
+	_(@prototype).extend Chaplin.Subscriber
 
-  loading: false
+	loading: false
 
-  constructor: ->
-    # Mixin a Deferred
-    _(this).extend $.Deferred()
+	constructor: ->
+		# Mixin a Deferred
+		_(this).extend $.Deferred()
 
-    utils.deferMethods
-      deferred: this
-      methods: ['triggerLogin', 'getLoginStatus']
-      onDeferral: @load
+		utils.deferMethods
+			deferred: this
+			methods: ['triggerLogin', 'getLoginStatus']
+			onDeferral: @load
 
-  # Disposal
-  # --------
+	# Disposal
+	# --------
 
-  disposed: false
+	disposed: false
 
-  dispose: ->
-    return if @disposed
+	dispose: ->
+		return if @disposed
 
-    # Unbind handlers of global events
-    @unsubscribeAllEvents()
+		# Unbind handlers of global events
+		@unsubscribeAllEvents()
 
-    # Finished
-    @disposed = true
+		# Finished
+		@disposed = true
 
-    # You're frozen when your heart’s not open
-    Object.freeze? this
+		# You're frozen when your heart’s not open
+		Object.freeze? this
 
 ###
 
