@@ -137,13 +137,15 @@ window.require.define({"application": function(exports, require, module) {
 }});
 
 window.require.define({"controllers/banners_controller": function(exports, require, module) {
-  var BannerItem, BannersController, Controller, mediator,
+  var BannerItem, BannerPage, BannersController, Controller, mediator,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   Controller = require('controllers/base/controller');
 
   BannerItem = require('views/banners');
+
+  BannerPage = require('views/banner_page_view');
 
   mediator = require('mediator');
 
@@ -158,21 +160,25 @@ window.require.define({"controllers/banners_controller": function(exports, requi
     BannersController.prototype.historyURL = 'banners';
 
     BannersController.prototype.index = function() {
-      this.collection = mediator.banners;
-      console.info(this.collection);
+      var collection;
+      collection = mediator.banners;
       this.view = new BannerItem({
-        collection: this.collection
+        collection: collection
       });
-      return this.collection.add({
-        name: "test",
-        time_start: null,
-        time_end: null,
-        hours: null,
-        countries: null,
-        platforms: null,
-        vendor: null,
-        counter: null,
-        price: null
+      collection.fetch();
+      return console.info(collection);
+    };
+
+    BannersController.prototype.banner = function(route) {
+      var collection, id;
+      id = route.id;
+      if (!collection) {
+        collection = mediator.banners;
+      }
+      collection.fetch();
+      this.model = collection.get(id);
+      return this.view = new BannerPage({
+        model: this.model
       });
     };
 
@@ -371,7 +377,6 @@ window.require.define({"controllers/storage_controller": function(exports, requi
     StorageController.prototype.initialize = function() {
       StorageController.__super__.initialize.apply(this, arguments);
       this.collection = new Banners();
-      this.collection.fetch();
       return mediator.banners = this.collection;
     };
 
@@ -659,6 +664,61 @@ window.require.define({"lib/view_helper": function(exports, require, module) {
     context = mediator.user || {};
     return Handlebars.helpers["with"].call(this, context, options);
   });
+
+  Handlebars.registerHelper("compare", function(lvalue, rvalue, options) {
+    var operator, operators, result;
+    if (arguments_.length < 3) {
+      throw new Error("Handlerbars Helper 'compare' needs 2 parameters");
+    }
+    operator = options.hash.operator || "==";
+    operators = {
+      "==": function(l, r) {
+        return l === r;
+      },
+      "===": function(l, r) {
+        return l === r;
+      },
+      "!=": function(l, r) {
+        return l !== r;
+      },
+      "<": function(l, r) {
+        return l < r;
+      },
+      ">": function(l, r) {
+        return l > r;
+      },
+      "<=": function(l, r) {
+        return l <= r;
+      },
+      ">=": function(l, r) {
+        return l >= r;
+      },
+      "typeof": function(l, r) {
+        return typeof l === r;
+      }
+    };
+    if (!operators[operator]) {
+      throw new Error("Handlerbars Helper 'compare' doesn't know the operator " + operator);
+    }
+    result = operators[operator](lvalue, rvalue);
+    if (result) {
+      return options.fn(this);
+    } else {
+      return options.inverse(this);
+    }
+  });
+
+  Handlebars.registerHelper("eachProperty", function(context, options) {
+    var prop, ret;
+    ret = "";
+    for (prop in context) {
+      ret = ret + options.fn({
+        property: prop,
+        value: context[prop]
+      });
+    }
+    return ret;
+  });
   
 }});
 
@@ -815,19 +875,22 @@ window.require.define({"routes": function(exports, require, module) {
   
   module.exports = function(match) {
     match('', 'banners#index');
-    return match('banners', 'banners#index');
+    match('banners', 'banners#index');
+    return match('banners/:id', 'banners#banner');
   };
   
 }});
 
 window.require.define({"views/banner_item": function(exports, require, module) {
-  var BannerItem, View, template,
+  var BannerItem, View, mediator, template,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   View = require('views/base/view');
 
   template = require('views/templates/banner_item');
+
+  mediator = require('mediator');
 
   module.exports = BannerItem = (function(_super) {
 
@@ -841,17 +904,179 @@ window.require.define({"views/banner_item": function(exports, require, module) {
 
     BannerItem.prototype.autoRender = true;
 
+    BannerItem.prototype.tagName = "tr";
+
+    BannerItem.prototype.initialize = function() {
+      this.delegate('click', '.clickable', this.openBanner);
+      return this.delegate('click', '.remove', this.removeBanner);
+    };
+
+    BannerItem.prototype.openBanner = function() {
+      return mediator.publish('!router:route', "/banners/" + this.model.id);
+    };
+
+    BannerItem.prototype.removeBanner = function() {
+      var collection;
+      collection = this.model.collection;
+      this.model.bind("remove", function() {
+        return this.destroy();
+      });
+      return collection.remove(this.model);
+    };
+
     return BannerItem;
 
   })(View);
+  
+}});
 
-  collectionView;
+window.require.define({"views/banner_new_view": function(exports, require, module) {
+  var BannerNewView, View, mediator, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
+  View = require('views/base/view');
+
+  template = require('views/templates/banner_new');
+
+  mediator = require('mediator');
+
+  module.exports = BannerNewView = (function(_super) {
+
+    __extends(BannerNewView, _super);
+
+    function BannerNewView() {
+      return BannerNewView.__super__.constructor.apply(this, arguments);
+    }
+
+    BannerNewView.prototype.template = template;
+
+    BannerNewView.prototype.events = {
+      "click .cancel": "closeForm",
+      "submit form": "addNewBanner"
+    };
+
+    BannerNewView.prototype.closeForm = function() {
+      var _this = this;
+      return this.$el.hide(500, function() {
+        return _this.dispose();
+      });
+    };
+
+    BannerNewView.prototype.addNewBanner = function() {
+      var name;
+      name = this.$el.find(".name").val();
+      this.collection.create({
+        name: name
+      });
+      this.collection;
+      return false;
+    };
+
+    return BannerNewView;
+
+  })(View);
+  
+}});
+
+window.require.define({"views/banner_page_view": function(exports, require, module) {
+  var BannerPageView, PageView, rulesViews, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  PageView = require('views/base/page_view');
+
+  template = require('views/templates/banner_page');
+
+  rulesViews = {
+    time_start: require('views/rule/date_view'),
+    time_end: require('views/rule/date_view'),
+    hours: require('views/rule/hours_view'),
+    days: require('views/rule/days_view'),
+    countries: require('views/rule/countries_view'),
+    platforms: require('views/rule/platforms_view'),
+    vendor: require('views/rule/platforms_view'),
+    price: require('views/rule/platforms_view'),
+    counter: require('views/rule/platforms_view')
+  };
+
+  module.exports = BannerPageView = (function(_super) {
+
+    __extends(BannerPageView, _super);
+
+    function BannerPageView() {
+      return BannerPageView.__super__.constructor.apply(this, arguments);
+    }
+
+    BannerPageView.prototype.template = template;
+
+    BannerPageView.prototype.container = '#page-container';
+
+    BannerPageView.prototype.autoRender = true;
+
+    BannerPageView.prototype.events = {
+      "click #add_rule_button a": "addRule"
+    };
+
+    BannerPageView.prototype.initialize = function() {
+      BannerPageView.__super__.initialize.apply(this, arguments);
+      return this.separateRules();
+    };
+
+    BannerPageView.prototype.afterRender = function() {
+      BannerPageView.__super__.afterRender.apply(this, arguments);
+      return this.renderSubviews();
+    };
+
+    BannerPageView.prototype.separateRules = function() {
+      var rules;
+      rules = _.extend({}, this.model.attributes);
+      delete rules.rules;
+      delete rules.id;
+      delete rules.name;
+      return this.model.set("rules", rules);
+    };
+
+    BannerPageView.prototype.renderSubviews = function() {
+      var rules,
+        _this = this;
+      rules = this.model.get("rules");
+      return _.each(rules, function(value, ruleId) {
+        if (value != null) {
+          return _this.subview(ruleId, new rulesViews[ruleId]({
+            autoRender: true,
+            "new": value === "-" ? true : void 0,
+            containerMethod: 'html',
+            className: "well rule " + ruleId,
+            rule: ruleId,
+            model: _this.model,
+            container: $("#rules_nav_" + ruleId)
+          }));
+        }
+      });
+    };
+
+    BannerPageView.prototype.addRule = function(e) {
+      var el, ruleId;
+      el = $(e.currentTarget);
+      ruleId = el.attr("href").substring(1);
+      if (!(this.model.get(ruleId) != null)) {
+        this.model.set(ruleId, '-');
+      }
+      this.separateRules();
+      this.render();
+      $("#ruletabs a[href='#rules_nav_" + ruleId + "']").tab('show');
+      return false;
+    };
+
+    return BannerPageView;
+
+  })(PageView);
   
 }});
 
 window.require.define({"views/banners": function(exports, require, module) {
-  var Banner, BannersView, CollectionView, template,
+  var Banner, BannersView, CollectionView, createFormView, template,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -860,6 +1085,8 @@ window.require.define({"views/banners": function(exports, require, module) {
   Banner = require('views/banner_item');
 
   template = require('views/templates/banners');
+
+  createFormView = require('views/banner_new_view');
 
   module.exports = BannersView = (function(_super) {
 
@@ -878,6 +1105,24 @@ window.require.define({"views/banners": function(exports, require, module) {
     BannersView.prototype.container = '#page-container';
 
     BannersView.prototype.autoRender = true;
+
+    BannersView.prototype.events = {
+      "click #createBanner": "showCreateForm"
+    };
+
+    BannersView.prototype.removeBanner = function(e) {};
+
+    BannersView.prototype.showCreateForm = function() {
+      return this.subview('createForm', new createFormView({
+        autoRender: true,
+        containerMethod: 'after',
+        className: "well",
+        collection: this.collection,
+        model: this.model,
+        id: "createForm",
+        container: $("#createBanner")
+      }));
+    };
 
     return BannersView;
 
@@ -964,6 +1209,31 @@ window.require.define({"views/base/page_view": function(exports, require, module
   
 }});
 
+window.require.define({"views/base/rule_view": function(exports, require, module) {
+  var View, ruleView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/base/rule');
+
+  module.exports = ruleView = (function(_super) {
+
+    __extends(ruleView, _super);
+
+    function ruleView() {
+      return ruleView.__super__.constructor.apply(this, arguments);
+    }
+
+    ruleView.prototype.template = template;
+
+    return ruleView;
+
+  })(View);
+  
+}});
+
 window.require.define({"views/base/view": function(exports, require, module) {
   var Chaplin, View,
     __hasProp = {}.hasOwnProperty,
@@ -980,6 +1250,31 @@ window.require.define({"views/base/view": function(exports, require, module) {
     function View() {
       return View.__super__.constructor.apply(this, arguments);
     }
+
+    View.prototype.dispose = function() {
+      var prop, properties, subview, _i, _j, _len, _len1, _ref;
+      if (this.disposed) {
+        return;
+      }
+      if (subview) {
+        _ref = this.subviews;
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          subview = _ref[_i];
+          subview.dispose();
+        }
+      }
+      this.unsubscribeAllEvents();
+      this.modelUnbindAll();
+      this.off();
+      this.$el.remove();
+      properties = ['el', '$el', 'options', 'model', 'collection', 'subviews', 'subviewsByName', '_callbacks'];
+      for (_j = 0, _len1 = properties.length; _j < _len1; _j++) {
+        prop = properties[_j];
+        delete this[prop];
+      }
+      this.disposed = true;
+      return typeof Object.freeze === "function" ? Object.freeze(this) : void 0;
+    };
 
     View.prototype.getTemplateFunction = function() {
       return this.template;
@@ -1056,6 +1351,31 @@ window.require.define({"views/home_page_view": function(exports, require, module
     return HomePageView;
 
   })(PageView);
+  
+}});
+
+window.require.define({"views/hours_view": function(exports, require, module) {
+  var HoursView, View, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/hours');
+
+  module.exports = HoursView = (function(_super) {
+
+    __extends(HoursView, _super);
+
+    function HoursView() {
+      return HoursView.__super__.constructor.apply(this, arguments);
+    }
+
+    HoursView.prototype.template = template;
+
+    return HoursView;
+
+  })(View);
   
 }});
 
@@ -1158,6 +1478,179 @@ window.require.define({"views/login_view": function(exports, require, module) {
   
 }});
 
+window.require.define({"views/rule/countries_view": function(exports, require, module) {
+  var View, countriesView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/rule/countries');
+
+  module.exports = countriesView = (function(_super) {
+
+    __extends(countriesView, _super);
+
+    function countriesView() {
+      return countriesView.__super__.constructor.apply(this, arguments);
+    }
+
+    countriesView.prototype.template = template;
+
+    return countriesView;
+
+  })(View);
+  
+}});
+
+window.require.define({"views/rule/date_view": function(exports, require, module) {
+  var View, dateView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/rule/date');
+
+  module.exports = dateView = (function(_super) {
+
+    __extends(dateView, _super);
+
+    function dateView() {
+      return dateView.__super__.constructor.apply(this, arguments);
+    }
+
+    dateView.prototype.template = template;
+
+    return dateView;
+
+  })(View);
+  
+}});
+
+window.require.define({"views/rule/days_view": function(exports, require, module) {
+  var View, daysView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/rule/days');
+
+  module.exports = daysView = (function(_super) {
+
+    __extends(daysView, _super);
+
+    function daysView() {
+      return daysView.__super__.constructor.apply(this, arguments);
+    }
+
+    daysView.prototype.template = template;
+
+    return daysView;
+
+  })(View);
+  
+}});
+
+window.require.define({"views/rule/hours_view": function(exports, require, module) {
+  var View, hoursView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/rule/hours');
+
+  module.exports = hoursView = (function(_super) {
+
+    __extends(hoursView, _super);
+
+    function hoursView() {
+      return hoursView.__super__.constructor.apply(this, arguments);
+    }
+
+    hoursView.prototype.template = template;
+
+    return hoursView;
+
+  })(View);
+  
+}});
+
+window.require.define({"views/rule/platforms_view": function(exports, require, module) {
+  var View, platformsView, template,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  View = require('views/base/view');
+
+  template = require('views/templates/rule/platforms');
+
+  module.exports = platformsView = (function(_super) {
+
+    __extends(platformsView, _super);
+
+    function platformsView() {
+      return platformsView.__super__.constructor.apply(this, arguments);
+    }
+
+    platformsView.prototype.template = template;
+
+    platformsView.prototype.defaults = [
+      {
+        name: "linux",
+        checked: null
+      }, {
+        name: "mac",
+        checked: null
+      }, {
+        name: "win",
+        checked: null
+      }
+    ];
+
+    platformsView.prototype.events = {
+      "click .save": "saveRule",
+      "click .cancel": "cancel"
+    };
+
+    platformsView.prototype.initialize = function() {
+      var array;
+      platformsView.__super__.initialize.apply(this, arguments);
+      if (!this.options["new"]) {
+        array = this.model.get(this.options.rule).split(",");
+        console.info(this.defaults);
+        return this.data = {
+          inputs: this.defaults
+        };
+      }
+    };
+
+    platformsView.prototype.saveRule = function() {
+      var values;
+      console.info();
+      values = new Array();
+      $(this.$el.find("input:checked")).each(function() {
+        return values.push($(this).val());
+      });
+      this.model.set(this.options.rule, values.join());
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    platformsView.prototype.getTemplateData = function() {
+      return this.data;
+    };
+
+    platformsView.prototype.cancel = function() {};
+
+    return platformsView;
+
+  })(View);
+  
+}});
+
 window.require.define({"views/templates/banner": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
@@ -1173,17 +1666,156 @@ window.require.define({"views/templates/banner_item": function(exports, require,
     var buffer = "", stack1, foundHelper, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
 
-    buffer += "<td>";
-    foundHelper = helpers.id;
-    stack1 = foundHelper || depth0.id;
-    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
-    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "id", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</td>\n<td>";
+    buffer += "<td class=\"clickable name\">";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</td>";
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable vendor\">";
+    foundHelper = helpers.vendor;
+    stack1 = foundHelper || depth0.vendor;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "vendor", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable time_end\">";
+    foundHelper = helpers.time_end;
+    stack1 = foundHelper || depth0.time_end;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "time_end", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable time_end\">";
+    foundHelper = helpers.time_end;
+    stack1 = foundHelper || depth0.time_end;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "time_end", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable hours\">";
+    foundHelper = helpers.hours;
+    stack1 = foundHelper || depth0.hours;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "hours", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable countries\">";
+    foundHelper = helpers.countries;
+    stack1 = foundHelper || depth0.countries;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "countries", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable platforms\">";
+    foundHelper = helpers.platforms;
+    stack1 = foundHelper || depth0.platforms;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "platforms", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable counter\">";
+    foundHelper = helpers.counter;
+    stack1 = foundHelper || depth0.counter;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "counter", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"clickable price\">";
+    foundHelper = helpers.price;
+    stack1 = foundHelper || depth0.price;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "price", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</td>\n<td class=\"remove\"><button class=\"btn btn-danger\"><i class=\"icon-remove icon-white\"></i></button></td>";
+    return buffer;});
+}});
+
+window.require.define({"views/templates/banner_new": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "<form class=\"form-inline\">\n	<input type=\"text\" class=\"input-small name\" placeholder=\"Banner name\">\n	<button type=\"submit\" class=\"btn submit\">Create</button>\n	<button type=\"button\" class=\"btn btn-inverse cancel\">Cancel</button>\n</form>";});
+}});
+
+window.require.define({"views/templates/banner_page": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression, blockHelperMissing=helpers.blockHelperMissing;
+
+  function program1(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n		";
+    foundHelper = helpers.value;
+    stack1 = foundHelper || depth0.value;
+    stack2 = helpers['if'];
+    tmp1 = self.program(2, program2, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n\n\n\n		";
+    return buffer;}
+  function program2(depth0,data) {
+    
+    var buffer = "", stack1;
+    buffer += "\n			<li><a data-toggle=\"tab\" href=\"#rules_nav_";
+    foundHelper = helpers.property;
+    stack1 = foundHelper || depth0.property;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\">";
+    foundHelper = helpers.property;
+    stack1 = foundHelper || depth0.property;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</a></li>\n		";
+    return buffer;}
+
+  function program4(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n			";
+    foundHelper = helpers.value;
+    stack1 = foundHelper || depth0.value;
+    stack2 = helpers['if'];
+    tmp1 = self.program(5, program5, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n		";
+    return buffer;}
+  function program5(depth0,data) {
+    
+    var buffer = "", stack1;
+    buffer += "\n				<div id=\"rules_nav_";
+    foundHelper = helpers.property;
+    stack1 = foundHelper || depth0.property;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" class=\"tab-pane\">\n				</div>\n			";
+    return buffer;}
+
+    buffer += "<h3>";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"btn-group\" id=\"add_rule_button\">\n	<button class=\"btn btn-large\">Add rule</button>\n	<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n		<span class=\"caret\"></span>\n	</button>\n	<ul class=\"dropdown-menu\">\n		<li><a href=\"#time_start\">Time start</a></li>\n		<li><a href=\"#time_end\">Time end</a></li>\n		<li><a href=\"#hours\">Hours</a></li>\n		<li><a href=\"#days\">Days</a></li>\n		<li><a href=\"#countries\">Countries</a></li>\n		<li><a href=\"#platforms\">Platforms</a></li>\n	</ul>\n</div>\n\n<div class=\"tabbable tabs-left\" >\n	<ul class=\"nav nav-tabs\" id=\"ruletabs\">\n		";
+    foundHelper = helpers.rules;
+    stack1 = foundHelper || depth0.rules;
+    foundHelper = helpers.eachProperty;
+    stack2 = foundHelper || depth0.eachProperty;
+    tmp1 = self.program(1, program1, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
+    else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n	</ul>\n	<div class=\"tab-content\">\n		";
+    foundHelper = helpers.rules;
+    stack1 = foundHelper || depth0.rules;
+    foundHelper = helpers.eachProperty;
+    stack2 = foundHelper || depth0.eachProperty;
+    tmp1 = self.program(4, program4, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
+    else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n	</div>\n</div>";
     return buffer;});
 }});
 
@@ -1193,7 +1825,7 @@ window.require.define({"views/templates/banners": function(exports, require, mod
     var foundHelper, self=this;
 
 
-    return "<h3>Banners:</h3>\n<table>\n	<caption>Banners view</caption>\n	<thead>\n	<tr>\n		<th>Id</th>\n		<th>Name</th>\n	</tr>\n	</thead>\n	<tbody id=\"bannersPH\">\n\n	</tbody>\n</table>\n\n";});
+    return "<h3>Banners:</h3>\n<table class=\"table table-striped\">\n	<caption>Banners view</caption>\n	<thead>\n	<tr>\n		<th>Name</th>\n		<th>Vendor</th>\n		<th>Time_end</th>\n		<th>Time_end</th>\n		<th>Hours</th>\n		<th>Countries</th>\n		<th>Platforms</th>\n		<th>Counter</th>\n		<th>Price</th>\n		<th>Remove</th>\n	</tr>\n	</thead>\n	<tbody id=\"bannersPH\">\n	</tbody>\n</table>\n<button class=\"btn btn-large btn-primary\" type=\"button\" id=\"createBanner\">Create new Banner</button>\n\n";});
 }});
 
 window.require.define({"views/templates/header": function(exports, require, module) {
@@ -1244,6 +1876,93 @@ window.require.define({"views/templates/login": function(exports, require, modul
     var buffer = "", foundHelper, self=this;
 
 
+    return buffer;});
+}});
+
+window.require.define({"views/templates/rule/countries": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+}});
+
+window.require.define({"views/templates/rule/date": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "date\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+}});
+
+window.require.define({"views/templates/rule/days": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "days\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+}});
+
+window.require.define({"views/templates/rule/hours": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var foundHelper, self=this;
+
+
+    return "hours\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+}});
+
+window.require.define({"views/templates/rule/platforms": function(exports, require, module) {
+  module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
+    helpers = helpers || Handlebars.helpers;
+    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
+
+  function program1(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n\n	<label class=\"checkbox inline\">\n		<input type=\"checkbox\" id=\"checkbox_";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" value=\"";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" ";
+    stack1 = {};
+    stack2 = "name";
+    stack1['class'] = stack2;
+    foundHelper = helpers.bindAttr;
+    stack2 = foundHelper || depth0.bindAttr;
+    tmp1 = {};
+    tmp1.hash = stack1;
+    if(typeof stack2 === functionType) { stack1 = stack2.call(depth0, tmp1); }
+    else if(stack2=== undef) { stack1 = helperMissing.call(depth0, "bindAttr", tmp1); }
+    else { stack1 = stack2; }
+    buffer += escapeExpression(stack1) + " > ";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\n	</label>\n";
+    return buffer;}
+
+    buffer += "\n";
+    foundHelper = helpers.inputs;
+    stack1 = foundHelper || depth0.inputs;
+    stack2 = helpers.each;
+    tmp1 = self.program(1, program1, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";
     return buffer;});
 }});
 

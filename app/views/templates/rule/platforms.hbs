@@ -1,0 +1,12 @@
+
+{{#each inputs}}
+
+	<label class="checkbox inline">
+		<input type="checkbox" id="checkbox_{{name}}" value="{{name}}" {{bindAttr class="name"}} > {{name}}
+	</label>
+{{/each}}
+
+<div class="form-actions">
+	<button type="submit" class="btn btn-primary save">Save changes</button>
+	<button type="button" class="btn cancel">Cancel</button>
+</div>

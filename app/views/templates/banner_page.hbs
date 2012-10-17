@@ -1,0 +1,36 @@
+<h3>{{name}}</h3>
+<div class="btn-group" id="add_rule_button">
+	<button class="btn btn-large">Add rule</button>
+	<button class="btn btn-large dropdown-toggle" data-toggle="dropdown">
+		<span class="caret"></span>
+	</button>
+	<ul class="dropdown-menu">
+		<li><a href="#time_start">Time start</a></li>
+		<li><a href="#time_end">Time end</a></li>
+		<li><a href="#hours">Hours</a></li>
+		<li><a href="#days">Days</a></li>
+		<li><a href="#countries">Countries</a></li>
+		<li><a href="#platforms">Platforms</a></li>
+	</ul>
+</div>
+
+<div class="tabbable tabs-left" >
+	<ul class="nav nav-tabs" id="ruletabs">
+		{{#eachProperty rules}}
+		{{#if value}}
+			<li><a data-toggle="tab" href="#rules_nav_{{property}}">{{property}}</a></li>
+		{{/if}}
+
+
+
+		{{/eachProperty }}
+	</ul>
+	<div class="tab-content">
+		{{#eachProperty rules}}
+			{{#if value}}
+				<div id="rules_nav_{{property}}" class="tab-pane">
+				</div>
+			{{/if}}
+		{{/eachProperty }}
+	</div>
+</div>

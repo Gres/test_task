@@ -4879,6 +4879,10 @@ a.badge:hover {
 .affix {
   position: fixed;
 }
-.test {
-  text-align: center;
+#createForm {
+  display: inline-block;
+  margin-left: 20px;
+}
+#add_rule_button {
+  margin-bottom: 20px;
 }

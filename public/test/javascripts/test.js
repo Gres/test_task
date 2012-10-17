@@ -141,6 +141,19 @@ window.require.define({"test/test-helpers": function(exports, require, module) {
   
 }});
 
+window.require.define({"test/views/banner_new_view": function(exports, require, module) {
+  var BannerNewView;
+
+  BannerNewView = require('views/banner_new_view');
+
+  describe('BannerNewView', function() {
+    return beforeEach(function() {
+      return this.view = new BannerNewView();
+    });
+  });
+  
+}});
+
 window.require.define({"test/views/banner_view": function(exports, require, module) {
   var BannerItem;
 
@@ -149,6 +162,19 @@ window.require.define({"test/views/banner_view": function(exports, require, modu
   describe('BannerItem', function() {
     return beforeEach(function() {
       return this.view = new BannerItem();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/base/rule_view": function(exports, require, module) {
+  var ruleView;
+
+  Base / (ruleView = require('views/base/rule_view'));
+
+  describe('Base/ruleView', function() {
+    return beforeEach(function() {
+      return this.view = new Base / ruleView();
     });
   });
   
@@ -221,6 +247,84 @@ window.require.define({"test/views/home_page_view_test": function(exports, requi
     });
     return it('should auto-render', function() {
       return expect(this.view.$el.find('img')).to.have.length(1);
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/hours_view": function(exports, require, module) {
+  var HoursView;
+
+  HoursView = require('views/hours_view');
+
+  describe('HoursView', function() {
+    return beforeEach(function() {
+      return this.view = new HoursView();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/rule/countries_view": function(exports, require, module) {
+  var countriesView;
+
+  Rule / (countriesView = require('views/rule/countries_view'));
+
+  describe('Rule/countriesView', function() {
+    return beforeEach(function() {
+      return this.view = new Rule / countriesView();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/rule/date_view": function(exports, require, module) {
+  var dateView;
+
+  Rule / (dateView = require('views/rule/date_view'));
+
+  describe('Rule/dateView', function() {
+    return beforeEach(function() {
+      return this.view = new Rule / dateView();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/rule/days_view": function(exports, require, module) {
+  var daysView;
+
+  Rule / (daysView = require('views/rule/days_view'));
+
+  describe('Rule/daysView', function() {
+    return beforeEach(function() {
+      return this.view = new Rule / daysView();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/rule/hours_view": function(exports, require, module) {
+  var hoursView;
+
+  Rule / (hoursView = require('views/rule/hours_view'));
+
+  describe('Rule/hoursView', function() {
+    return beforeEach(function() {
+      return this.view = new Rule / hoursView();
+    });
+  });
+  
+}});
+
+window.require.define({"test/views/rule/platrforms_view": function(exports, require, module) {
+  var platrformsView;
+
+  Rule / (platrformsView = require('views/rule/platrforms_view'));
+
+  describe('Rule/platrformsView', function() {
+    return beforeEach(function() {
+      return this.view = new Rule / platrformsView();
     });
   });
   

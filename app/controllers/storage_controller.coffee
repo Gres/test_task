@@ -6,6 +6,5 @@ module.exports = class StorageController extends Controller
 	initialize: ->
 		super
 		@collection = new Banners()
-		@collection.fetch()
 		mediator.banners = @collection
 
