@@ -7,6 +7,6 @@ module.exports = class Banner extends Model
 		countries: null
 		platforms: null
 		vendor: null
-		counter: null
-		price: null
+		counter: 0
+		price: 0
 

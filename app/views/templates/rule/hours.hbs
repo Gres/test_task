@@ -1,5 +1,6 @@
-hours
-<div class="form-actions">
-	<button type="submit" class="btn btn-primary save">Save changes</button>
-	<button type="button" class="btn cancel">Cancel</button>
+<div class="inputs" id="hoursInputs">
+	{{#each inputs}}
+		<input type="checkbox" id="hours_{{name}}" value="{{name}}" name="hours" {{#if checked}}checked="checked" {{/if}} /><label for="hours_{{name}}" class="checkbox inline"> {{name}}	</label>
+	{{/each}}
 </div>
+

@@ -750,8 +750,8 @@ window.require.define({"models/banner": function(exports, require, module) {
       countries: null,
       platforms: null,
       vendor: null,
-      counter: null,
-      price: null
+      counter: 0,
+      price: 0
     };
 
     return Banner;
@@ -1522,6 +1522,33 @@ window.require.define({"views/rule/date_view": function(exports, require, module
 
     dateView.prototype.template = template;
 
+    dateView.prototype.initialize = function() {
+      var _this = this;
+      dateView.__super__.initialize.apply(this, arguments);
+      this.data = {
+        inputs: this.defaults
+      };
+      return this.on('addedToDOM', function() {
+        return _this.$el.find(".datepicker").datetimepicker({
+          altField: "#alt_example_4_alt",
+          altFieldTimeOnly: false,
+          defaultDate: _this.model.get(_this.options.rule) * 1000
+        });
+      });
+    };
+
+    dateView.prototype.saveRule = function() {
+      var date;
+      date = this.$el.find(".datepicker").datetimepicker("getDate").getTime() / 1000;
+      this.model.set(this.options.rule, date);
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    dateView.prototype.getTemplateData = function() {
+      return this.data;
+    };
+
     return dateView;
 
   })(View);
@@ -1547,6 +1574,72 @@ window.require.define({"views/rule/days_view": function(exports, require, module
 
     daysView.prototype.template = template;
 
+    daysView.prototype.defaults = [
+      {
+        name: "Mon",
+        checked: null
+      }, {
+        name: "Tue",
+        checked: null
+      }, {
+        name: "Wed",
+        checked: null
+      }, {
+        name: "Thu",
+        checked: null
+      }, {
+        name: "Fri",
+        checked: null
+      }, {
+        name: "Sat",
+        checked: null
+      }, {
+        name: "Sun",
+        checked: null
+      }
+    ];
+
+    daysView.prototype.initialize = function() {
+      var array,
+        _this = this;
+      daysView.__super__.initialize.apply(this, arguments);
+      if (!this.options["new"]) {
+        array = this.model.get(this.options.rule).split(",");
+        _.each(array, function(val) {
+          return _.each(_this.defaults, function(defval, defkey) {
+            if (_this.defaults[defkey].name === 1) {
+              return _this.defaults[defkey].checked = true;
+            }
+          });
+        });
+      }
+      this.data = {
+        inputs: this.defaults
+      };
+      return this.on('addedToDOM', function() {
+        return $("#daysInputs").buttonset();
+      });
+    };
+
+    daysView.prototype.saveRule = function() {
+      var values;
+      values = new Array();
+      $(this.$el.find("input")).each(function() {
+        if ($(this).is(':checked')) {
+          return values.push(1);
+        } else {
+          return values.push(0);
+        }
+      });
+      this.model.set(this.options.rule, values.join());
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    daysView.prototype.getTemplateData = function() {
+      return this.data;
+    };
+
     return daysView;
 
   })(View);
@@ -1571,6 +1664,54 @@ window.require.define({"views/rule/hours_view": function(exports, require, modul
     }
 
     hoursView.prototype.template = template;
+
+    hoursView.prototype.initialize = function() {
+      var array, x, y, _i,
+        _this = this;
+      hoursView.__super__.initialize.apply(this, arguments);
+      this.defaults = new Array;
+      for (x = _i = 1; _i <= 24; x = ++_i) {
+        y = new Object;
+        y.name = x;
+        y.checked = null;
+        this.defaults.push(y);
+      }
+      if (!this.options["new"]) {
+        array = this.model.get(this.options.rule).split(",");
+        _.each(array, function(val) {
+          return _.each(_this.defaults, function(defval, defkey) {
+            if (_this.defaults[defkey].name === 1) {
+              return _this.defaults[defkey].checked = true;
+            }
+          });
+        });
+      }
+      this.data = {
+        inputs: this.defaults
+      };
+      return this.on('addedToDOM', function() {
+        return $("#hoursInputs").buttonset();
+      });
+    };
+
+    hoursView.prototype.saveRule = function() {
+      var values;
+      values = new Array();
+      $(this.$el.find("input")).each(function() {
+        if ($(this).is(':checked')) {
+          return values.push(1);
+        } else {
+          return values.push(0);
+        }
+      });
+      this.model.set(this.options.rule, values.join());
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    hoursView.prototype.getTemplateData = function() {
+      return this.data;
+    };
 
     return hoursView;
 
@@ -1610,26 +1751,30 @@ window.require.define({"views/rule/platforms_view": function(exports, require, m
       }
     ];
 
-    platformsView.prototype.events = {
-      "click .save": "saveRule",
-      "click .cancel": "cancel"
-    };
-
     platformsView.prototype.initialize = function() {
-      var array;
+      var array,
+        _this = this;
       platformsView.__super__.initialize.apply(this, arguments);
       if (!this.options["new"]) {
         array = this.model.get(this.options.rule).split(",");
-        console.info(this.defaults);
-        return this.data = {
-          inputs: this.defaults
-        };
+        _.each(array, function(val) {
+          return _.each(_this.defaults, function(defval, defkey) {
+            if (_this.defaults[defkey].name === val) {
+              return _this.defaults[defkey].checked = true;
+            }
+          });
+        });
       }
+      this.data = {
+        inputs: this.defaults
+      };
+      return this.on('addedToDOM', function() {
+        return $("#platformsInputs").buttonset();
+      });
     };
 
     platformsView.prototype.saveRule = function() {
       var values;
-      console.info();
       values = new Array();
       $(this.$el.find("input:checked")).each(function() {
         return values.push($(this).val());
@@ -1642,8 +1787,6 @@ window.require.define({"views/rule/platforms_view": function(exports, require, m
     platformsView.prototype.getTemplateData = function() {
       return this.data;
     };
-
-    platformsView.prototype.cancel = function() {};
 
     return platformsView;
 
@@ -1732,7 +1875,7 @@ window.require.define({"views/templates/banner_page": function(exports, require,
   function program1(depth0,data) {
     
     var buffer = "", stack1, stack2;
-    buffer += "\n		";
+    buffer += "\n				";
     foundHelper = helpers.value;
     stack1 = foundHelper || depth0.value;
     stack2 = helpers['if'];
@@ -1742,12 +1885,12 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n\n\n\n		";
+    buffer += "\n				";
     return buffer;}
   function program2(depth0,data) {
     
     var buffer = "", stack1;
-    buffer += "\n			<li><a data-toggle=\"tab\" href=\"#rules_nav_";
+    buffer += "\n					<li><a data-toggle=\"tab\" href=\"#rules_nav_";
     foundHelper = helpers.property;
     stack1 = foundHelper || depth0.property;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
@@ -1757,13 +1900,13 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     stack1 = foundHelper || depth0.property;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</a></li>\n		";
+    buffer += escapeExpression(stack1) + "</a></li>\n				";
     return buffer;}
 
   function program4(depth0,data) {
     
     var buffer = "", stack1, stack2;
-    buffer += "\n			";
+    buffer += "\n					";
     foundHelper = helpers.value;
     stack1 = foundHelper || depth0.value;
     stack2 = helpers['if'];
@@ -1773,17 +1916,17 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n		";
+    buffer += "\n				";
     return buffer;}
   function program5(depth0,data) {
     
     var buffer = "", stack1;
-    buffer += "\n				<div id=\"rules_nav_";
+    buffer += "\n						<div id=\"rules_nav_";
     foundHelper = helpers.property;
     stack1 = foundHelper || depth0.property;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\" class=\"tab-pane\">\n				</div>\n			";
+    buffer += escapeExpression(stack1) + "\" class=\"tab-pane\">\n						</div>\n					";
     return buffer;}
 
     buffer += "<h3>";
@@ -1791,7 +1934,27 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"btn-group\" id=\"add_rule_button\">\n	<button class=\"btn btn-large\">Add rule</button>\n	<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n		<span class=\"caret\"></span>\n	</button>\n	<ul class=\"dropdown-menu\">\n		<li><a href=\"#time_start\">Time start</a></li>\n		<li><a href=\"#time_end\">Time end</a></li>\n		<li><a href=\"#hours\">Hours</a></li>\n		<li><a href=\"#days\">Days</a></li>\n		<li><a href=\"#countries\">Countries</a></li>\n		<li><a href=\"#platforms\">Platforms</a></li>\n	</ul>\n</div>\n\n<div class=\"tabbable tabs-left\" >\n	<ul class=\"nav nav-tabs\" id=\"ruletabs\">\n		";
+    buffer += escapeExpression(stack1) + "</h3>\n<form class=\"form-horizontal\">\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerName\">Name</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerName\" placeholder=\"Banner name\" value=\"";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerVendor\">Vendor</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerVendor\" placeholder=\"Vendor\" value=\"";
+    foundHelper = helpers.vendor;
+    stack1 = foundHelper || depth0.vendor;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "vendor", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">Price</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerPrice\" placeholder=\"Price\" value=\"";
+    foundHelper = helpers.price;
+    stack1 = foundHelper || depth0.price;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "price", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">bannerCount</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerCount\" placeholder=\"Count\" disabled value=\"";
+    foundHelper = helpers.count;
+    stack1 = foundHelper || depth0.count;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "count", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n\n		<div class=\"btn-group\" id=\"add_rule_button\">\n			<button class=\"btn btn-large\">Add rule</button>\n			<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n				<span class=\"caret\"></span>\n			</button>\n			<ul class=\"dropdown-menu\">\n				<li><a href=\"#time_start\">Time start</a></li>\n				<li><a href=\"#time_end\">Time end</a></li>\n				<li><a href=\"#hours\">Hours</a></li>\n				<li><a href=\"#days\">Days</a></li>\n				<li><a href=\"#countries\">Countries</a></li>\n				<li><a href=\"#platforms\">Platforms</a></li>\n			</ul>\n		</div>\n\n		<div class=\"tabbable tabs-left\" >\n			<ul class=\"nav nav-tabs\" id=\"ruletabs\">\n				";
     foundHelper = helpers.rules;
     stack1 = foundHelper || depth0.rules;
     foundHelper = helpers.eachProperty;
@@ -1803,7 +1966,7 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
     else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n	</ul>\n	<div class=\"tab-content\">\n		";
+    buffer += "\n			</ul>\n			<div class=\"tab-content\">\n				";
     foundHelper = helpers.rules;
     stack1 = foundHelper || depth0.rules;
     foundHelper = helpers.eachProperty;
@@ -1815,7 +1978,7 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
     else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n	</div>\n</div>";
+    buffer += "\n			</div>\n		</div>\n	</div>\n</form>";
     return buffer;});
 }});
 
@@ -1894,25 +2057,125 @@ window.require.define({"views/templates/rule/date": function(exports, require, m
     var foundHelper, self=this;
 
 
-    return "date\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+    return "<div class=\"datepicker\"></div>\n";});
 }});
 
 window.require.define({"views/templates/rule/days": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    var foundHelper, self=this;
+    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
+  function program1(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n	<input type=\"checkbox\" id=\"days_";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" value=\"";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" name=\"days\" ";
+    foundHelper = helpers.checked;
+    stack1 = foundHelper || depth0.checked;
+    stack2 = helpers['if'];
+    tmp1 = self.program(2, program2, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += " /><label for=\"days_";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" class=\"checkbox inline\"> ";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "	</label>\n	";
+    return buffer;}
+  function program2(depth0,data) {
+    
+    
+    return "checked=\"checked\" ";}
 
-    return "days\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+    buffer += "<div class=\"inputs\" id=\"daysInputs\">\n	";
+    foundHelper = helpers.inputs;
+    stack1 = foundHelper || depth0.inputs;
+    stack2 = helpers.each;
+    tmp1 = self.program(1, program1, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n</div>\n\n";
+    return buffer;});
 }});
 
 window.require.define({"views/templates/rule/hours": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    var foundHelper, self=this;
+    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
+  function program1(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n		<input type=\"checkbox\" id=\"hours_";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" value=\"";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" name=\"hours\" ";
+    foundHelper = helpers.checked;
+    stack1 = foundHelper || depth0.checked;
+    stack2 = helpers['if'];
+    tmp1 = self.program(2, program2, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += " /><label for=\"hours_";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" class=\"checkbox inline\"> ";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "	</label>\n	";
+    return buffer;}
+  function program2(depth0,data) {
+    
+    
+    return "checked=\"checked\" ";}
 
-    return "hours\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+    buffer += "<div class=\"inputs\" id=\"hoursInputs\">\n	";
+    foundHelper = helpers.inputs;
+    stack1 = foundHelper || depth0.inputs;
+    stack2 = helpers.each;
+    tmp1 = self.program(1, program1, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n</div>\n\n";
+    return buffer;});
 }});
 
 window.require.define({"views/templates/rule/platforms": function(exports, require, module) {
@@ -1923,7 +2186,7 @@ window.require.define({"views/templates/rule/platforms": function(exports, requi
   function program1(depth0,data) {
     
     var buffer = "", stack1, stack2;
-    buffer += "\n\n	<label class=\"checkbox inline\">\n		<input type=\"checkbox\" id=\"checkbox_";
+    buffer += "\n		<input type=\"checkbox\" id=\"platforms_";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
@@ -1933,26 +2196,34 @@ window.require.define({"views/templates/rule/platforms": function(exports, requi
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\" ";
-    stack1 = {};
-    stack2 = "name";
-    stack1['class'] = stack2;
-    foundHelper = helpers.bindAttr;
-    stack2 = foundHelper || depth0.bindAttr;
-    tmp1 = {};
-    tmp1.hash = stack1;
-    if(typeof stack2 === functionType) { stack1 = stack2.call(depth0, tmp1); }
-    else if(stack2=== undef) { stack1 = helperMissing.call(depth0, "bindAttr", tmp1); }
-    else { stack1 = stack2; }
-    buffer += escapeExpression(stack1) + " > ";
+    buffer += escapeExpression(stack1) + "\" name=\"platforms\" ";
+    foundHelper = helpers.checked;
+    stack1 = foundHelper || depth0.checked;
+    stack2 = helpers['if'];
+    tmp1 = self.program(2, program2, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += " /><label for=\"platforms_";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\n	</label>\n";
+    buffer += escapeExpression(stack1) + "\" class=\"checkbox inline\"> ";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "	</label>\n	";
     return buffer;}
+  function program2(depth0,data) {
+    
+    
+    return "checked=\"checked\" ";}
 
-    buffer += "\n";
+    buffer += "<div class=\"inputs\" id=\"platformsInputs\">\n	";
     foundHelper = helpers.inputs;
     stack1 = foundHelper || depth0.inputs;
     stack2 = helpers.each;
@@ -1962,7 +2233,7 @@ window.require.define({"views/templates/rule/platforms": function(exports, requi
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";
+    buffer += "\n</div>\n";
     return buffer;});
 }});
 
