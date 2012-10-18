@@ -1,5 +1,9 @@
-<div class="inputs" id="platformsInputs">
-	{{#each inputs}}
+<h3>{{title}}</h3>
+<div class="ruleContent">
+	<div class="inputs" id="platformsInputs">
+		{{#each inputs}}
 		<input type="checkbox" id="platforms_{{name}}" value="{{name}}" name="platforms" {{#if checked}}checked="checked" {{/if}} /><label for="platforms_{{name}}" class="checkbox inline"> {{name}}	</label>
-	{{/each}}
+		{{/each}}
+	</div>
 </div>
+

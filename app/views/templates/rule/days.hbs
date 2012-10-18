@@ -1,6 +1,9 @@
-<div class="inputs" id="daysInputs">
-	{{#each inputs}}
-	<input type="checkbox" id="days_{{name}}" value="{{name}}" name="days" {{#if checked}}checked="checked" {{/if}} /><label for="days_{{name}}" class="checkbox inline"> {{name}}	</label>
-	{{/each}}
-</div>
 
+<h3>{{title}}</h3>
+<div class="ruleContent">
+	<div class="inputs" id="daysInputs">
+		{{#each inputs}}
+		<input type="checkbox" id="days_{{name}}" value="{{name}}" name="days" {{#if checked}}checked="checked" {{/if}} /><label for="days_{{name}}" class="checkbox inline"> {{name}}	</label>
+		{{/each}}
+	</div>
+</div>

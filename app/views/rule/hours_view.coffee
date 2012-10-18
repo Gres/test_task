@@ -14,13 +14,14 @@ module.exports = class hoursView extends View
 			@defaults.push(y)
 		if !@options.new
 			array=@model.get(@options.rule).split(",")
-			_.each(array, (val)	=>
-				_.each(@defaults,(defval,defkey)=>
-					if @defaults[defkey].name is 1
-						@defaults[defkey].checked=true
-				)
+			_.each(array, (val,key)	=>
+				if array[key] is '1'
+					@defaults[key].checked=true
 			)
-		@data=inputs: @defaults
+
+		@data=
+			inputs: @defaults
+			title: @options.rule
 		@on 'addedToDOM', =>
 			$("#hoursInputs").buttonset();
 	saveRule:->
@@ -31,6 +32,7 @@ module.exports = class hoursView extends View
 			else
 				values.push(0)
 		)
+
 		@model.set(@options.rule,values.join())
 		@model.set("rules",null)
 		@model.save();

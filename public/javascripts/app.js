@@ -1020,12 +1020,38 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
 
     BannerPageView.prototype.initialize = function() {
       BannerPageView.__super__.initialize.apply(this, arguments);
+      this.delegate('click', '.save', this.save);
       return this.separateRules();
     };
 
+    BannerPageView.prototype.save = function() {
+      var otherName, otherView, self, values, _ref;
+      values = new Array();
+      self = this;
+      $(this.$el.find(".modelInput")).each(function() {
+        values.push();
+        if ($(this).val() || $(this).val() === 0) {
+          return self.model.set($(this).attr("name"), $(this).val());
+        }
+      });
+      _ref = this.subviewsByName;
+      for (otherName in _ref) {
+        otherView = _ref[otherName];
+        otherView.saveRule();
+      }
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    BannerPageView.prototype.cancel = function() {};
+
     BannerPageView.prototype.afterRender = function() {
       BannerPageView.__super__.afterRender.apply(this, arguments);
-      return this.renderSubviews();
+      this.renderSubviews();
+      return $("#accordion").accordion({
+        header: "h3",
+        heightStyle: "content"
+      });
     };
 
     BannerPageView.prototype.separateRules = function() {
@@ -1034,6 +1060,9 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
       delete rules.rules;
       delete rules.id;
       delete rules.name;
+      delete rules.price;
+      delete rules.vendor;
+      delete rules.count;
       return this.model.set("rules", rules);
     };
 
@@ -1046,11 +1075,11 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
           return _this.subview(ruleId, new rulesViews[ruleId]({
             autoRender: true,
             "new": value === "-" ? true : void 0,
-            containerMethod: 'html',
-            className: "well rule " + ruleId,
+            containerMethod: 'append',
+            className: "rule " + ruleId,
             rule: ruleId,
             model: _this.model,
-            container: $("#rules_nav_" + ruleId)
+            container: $("#accordion")
           }));
         }
       });
@@ -1065,7 +1094,6 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
       }
       this.separateRules();
       this.render();
-      $("#ruletabs a[href='#rules_nav_" + ruleId + "']").tab('show');
       return false;
     };
 
@@ -1497,6 +1525,101 @@ window.require.define({"views/rule/countries_view": function(exports, require, m
 
     countriesView.prototype.template = template;
 
+    countriesView.prototype.events = {
+      "click button": "addCountry"
+    };
+
+    countriesView.prototype.initialize = function() {
+      var array,
+        _this = this;
+      countriesView.__super__.initialize.apply(this, arguments);
+      this.defaults = new Array();
+      if (this.model.get(this.options.rule) === '-') {
+        this.model.set(this.options.rule, null);
+      }
+      if (!this.options["new"]) {
+        array = this.model.get(this.options.rule).split(",");
+        _.each(array, function(val) {
+          return _this.defaults.push({
+            name: val
+          });
+        });
+      }
+      this.delegate('click', '.icon-trash', this.deleteCountry);
+      this.data = {
+        inputs: this.defaults,
+        title: this.options.rule,
+        countryArr: this.model.get(this.options.rule)
+      };
+      return this.on('addedToDOM', function() {
+        return _this.$el.find('select').selectToAutocomplete();
+      });
+    };
+
+    countriesView.prototype.addCountry = function() {
+      var country, item, ul, val, _i, _len, _ref;
+      country = this.$el.find('.ui-autocomplete-input').val();
+      if (country === "Select Country") {
+        return false;
+      }
+      _ref = this.defaults;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        item = _ref[_i];
+        if (item.name === country) {
+          return;
+        }
+      }
+      if (country) {
+        this.defaults.push({
+          name: country
+        });
+        val = $("#countyHidden").val();
+        if (val) {
+          $("#countyHidden").val("" + val + "," + country);
+        } else {
+          $("#countyHidden").val("" + country);
+        }
+        ul = this.$el.find(".countries");
+        return $(ul).append("<li data-country='" + country + "'>" + country + "<i class='icon-trash'></i></li>");
+      }
+    };
+
+    countriesView.prototype.deleteCountry = function(e) {
+      var country, el, index, indexToRemove, item, newtxt, _i, _j, _len, _len1, _ref, _ref1;
+      el = $(e.currentTarget).parent("li");
+      country = el.data("country");
+      newtxt = new Array();
+      _ref = this.defaults;
+      for (index = _i = 0, _len = _ref.length; _i < _len; index = ++_i) {
+        item = _ref[index];
+        if (item.name === country) {
+          indexToRemove = index;
+        }
+      }
+      this.defaults.splice(indexToRemove, indexToRemove);
+      indexToRemove;
+
+      _ref1 = this.defaults;
+      for (index = _j = 0, _len1 = _ref1.length; _j < _len1; index = ++_j) {
+        item = _ref1[index];
+        newtxt.push(item.name);
+      }
+      $("#countyHidden").val(newtxt.join());
+      return el.hide(500).remove();
+    };
+
+    countriesView.prototype.saveRule = function() {
+      var values;
+      values = $(this.$el.find("#countyHidden")).val();
+      this.model.set(this.options.rule, values);
+      this.model.set("rules", null);
+      return this.model.save();
+    };
+
+    countriesView.prototype.getTemplateData = function() {
+      return this.data;
+    };
+
     return countriesView;
 
   })(View);
@@ -1522,17 +1645,26 @@ window.require.define({"views/rule/date_view": function(exports, require, module
 
     dateView.prototype.template = template;
 
-    dateView.prototype.initialize = function() {
-      var _this = this;
+    dateView.prototype.initialize = function(options) {
+      var dd,
+        _this = this;
       dateView.__super__.initialize.apply(this, arguments);
+      if (this.model.get(options.rule) !== "-") {
+        dd = new Date(this.model.get(options.rule) * 1000);
+      } else {
+        dd = new Date();
+      }
       this.data = {
-        inputs: this.defaults
+        inputs: this.defaults,
+        title: this.options.rule
       };
       return this.on('addedToDOM', function() {
         return _this.$el.find(".datepicker").datetimepicker({
           altField: "#alt_example_4_alt",
           altFieldTimeOnly: false,
-          defaultDate: _this.model.get(_this.options.rule) * 1000
+          defaultDate: dd,
+          hour: dd.getHours(),
+          minute: dd.getMinutes()
         });
       });
     };
@@ -1605,16 +1737,15 @@ window.require.define({"views/rule/days_view": function(exports, require, module
       daysView.__super__.initialize.apply(this, arguments);
       if (!this.options["new"]) {
         array = this.model.get(this.options.rule).split(",");
-        _.each(array, function(val) {
-          return _.each(_this.defaults, function(defval, defkey) {
-            if (_this.defaults[defkey].name === 1) {
-              return _this.defaults[defkey].checked = true;
-            }
-          });
+        _.each(array, function(val, key) {
+          if (array[key] === '1') {
+            return _this.defaults[key].checked = true;
+          }
         });
       }
       this.data = {
-        inputs: this.defaults
+        inputs: this.defaults,
+        title: this.options.rule
       };
       return this.on('addedToDOM', function() {
         return $("#daysInputs").buttonset();
@@ -1678,16 +1809,15 @@ window.require.define({"views/rule/hours_view": function(exports, require, modul
       }
       if (!this.options["new"]) {
         array = this.model.get(this.options.rule).split(",");
-        _.each(array, function(val) {
-          return _.each(_this.defaults, function(defval, defkey) {
-            if (_this.defaults[defkey].name === 1) {
-              return _this.defaults[defkey].checked = true;
-            }
-          });
+        _.each(array, function(val, key) {
+          if (array[key] === '1') {
+            return _this.defaults[key].checked = true;
+          }
         });
       }
       this.data = {
-        inputs: this.defaults
+        inputs: this.defaults,
+        title: this.options.rule
       };
       return this.on('addedToDOM', function() {
         return $("#hoursInputs").buttonset();
@@ -1766,7 +1896,8 @@ window.require.define({"views/rule/platforms_view": function(exports, require, m
         });
       }
       this.data = {
-        inputs: this.defaults
+        inputs: this.defaults,
+        title: this.options.rule
       };
       return this.on('addedToDOM', function() {
         return $("#platformsInputs").buttonset();
@@ -1870,115 +2001,35 @@ window.require.define({"views/templates/banner_new": function(exports, require, 
 window.require.define({"views/templates/banner_page": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression, blockHelperMissing=helpers.blockHelperMissing;
+    var buffer = "", stack1, foundHelper, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
-  function program1(depth0,data) {
-    
-    var buffer = "", stack1, stack2;
-    buffer += "\n				";
-    foundHelper = helpers.value;
-    stack1 = foundHelper || depth0.value;
-    stack2 = helpers['if'];
-    tmp1 = self.program(2, program2, data);
-    tmp1.hash = {};
-    tmp1.fn = tmp1;
-    tmp1.inverse = self.noop;
-    stack1 = stack2.call(depth0, stack1, tmp1);
-    if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n				";
-    return buffer;}
-  function program2(depth0,data) {
-    
-    var buffer = "", stack1;
-    buffer += "\n					<li><a data-toggle=\"tab\" href=\"#rules_nav_";
-    foundHelper = helpers.property;
-    stack1 = foundHelper || depth0.property;
-    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
-    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">";
-    foundHelper = helpers.property;
-    stack1 = foundHelper || depth0.property;
-    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
-    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</a></li>\n				";
-    return buffer;}
-
-  function program4(depth0,data) {
-    
-    var buffer = "", stack1, stack2;
-    buffer += "\n					";
-    foundHelper = helpers.value;
-    stack1 = foundHelper || depth0.value;
-    stack2 = helpers['if'];
-    tmp1 = self.program(5, program5, data);
-    tmp1.hash = {};
-    tmp1.fn = tmp1;
-    tmp1.inverse = self.noop;
-    stack1 = stack2.call(depth0, stack1, tmp1);
-    if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n				";
-    return buffer;}
-  function program5(depth0,data) {
-    
-    var buffer = "", stack1;
-    buffer += "\n						<div id=\"rules_nav_";
-    foundHelper = helpers.property;
-    stack1 = foundHelper || depth0.property;
-    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
-    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "property", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\" class=\"tab-pane\">\n						</div>\n					";
-    return buffer;}
 
     buffer += "<h3>";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "</h3>\n<form class=\"form-horizontal\">\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerName\">Name</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerName\" placeholder=\"Banner name\" value=\"";
+    buffer += escapeExpression(stack1) + "</h3>\n<form class=\"form-horizontal\" class=\"mainform\">\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerName\">Name</label>\n		<div class=\"controls\">\n			<input type=\"text\" class=\"modelInput\" name=\"name\" id=\"bannerName\" placeholder=\"Banner name\" value=\"";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerVendor\">Vendor</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerVendor\" placeholder=\"Vendor\" value=\"";
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerVendor\">Vendor</label>\n		<div class=\"controls\">\n			<input type=\"text\" class=\"modelInput\" name=\"vendor\" id=\"bannerVendor\" placeholder=\"Vendor\" value=\"";
     foundHelper = helpers.vendor;
     stack1 = foundHelper || depth0.vendor;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "vendor", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">Price</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerPrice\" placeholder=\"Price\" value=\"";
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">Price</label>\n		<div class=\"controls\">\n			<input type=\"text\" class=\"modelInput\" name=\"price\" id=\"bannerPrice\" placeholder=\"Price\" value=\"";
     foundHelper = helpers.price;
     stack1 = foundHelper || depth0.price;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "price", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">bannerCount</label>\n		<div class=\"controls\">\n			<input type=\"text\" id=\"bannerCount\" placeholder=\"Count\" disabled value=\"";
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group\">\n		<label class=\"control-label\" for=\"bannerPrice\">bannerCount</label>\n		<div class=\"controls\">\n			<input type=\"text\" class=\"modelInput\" name=\"count\" id=\"bannerCount\" placeholder=\"Count\" disabled value=\"";
     foundHelper = helpers.count;
     stack1 = foundHelper || depth0.count;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "count", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">\n		</div>\n\n		<div class=\"btn-group\" id=\"add_rule_button\">\n			<button class=\"btn btn-large\">Add rule</button>\n			<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n				<span class=\"caret\"></span>\n			</button>\n			<ul class=\"dropdown-menu\">\n				<li><a href=\"#time_start\">Time start</a></li>\n				<li><a href=\"#time_end\">Time end</a></li>\n				<li><a href=\"#hours\">Hours</a></li>\n				<li><a href=\"#days\">Days</a></li>\n				<li><a href=\"#countries\">Countries</a></li>\n				<li><a href=\"#platforms\">Platforms</a></li>\n			</ul>\n		</div>\n\n		<div class=\"tabbable tabs-left\" >\n			<ul class=\"nav nav-tabs\" id=\"ruletabs\">\n				";
-    foundHelper = helpers.rules;
-    stack1 = foundHelper || depth0.rules;
-    foundHelper = helpers.eachProperty;
-    stack2 = foundHelper || depth0.eachProperty;
-    tmp1 = self.program(1, program1, data);
-    tmp1.hash = {};
-    tmp1.fn = tmp1;
-    tmp1.inverse = self.noop;
-    if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
-    else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
-    if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n			</ul>\n			<div class=\"tab-content\">\n				";
-    foundHelper = helpers.rules;
-    stack1 = foundHelper || depth0.rules;
-    foundHelper = helpers.eachProperty;
-    stack2 = foundHelper || depth0.eachProperty;
-    tmp1 = self.program(4, program4, data);
-    tmp1.hash = {};
-    tmp1.fn = tmp1;
-    tmp1.inverse = self.noop;
-    if(foundHelper && typeof stack2 === functionType) { stack1 = stack2.call(depth0, stack1, tmp1); }
-    else { stack1 = blockHelperMissing.call(depth0, stack2, stack1, tmp1); }
-    if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n			</div>\n		</div>\n	</div>\n</form>";
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n		<div class=\"btn-group\" id=\"add_rule_button\">\n			<button class=\"btn btn-large\">Add rule</button>\n			<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n				<span class=\"caret\"></span>\n			</button>\n			<ul class=\"dropdown-menu\">\n				<li><a href=\"#time_start\">Time start</a></li>\n				<li><a href=\"#time_end\">Time end</a></li>\n				<li><a href=\"#hours\">Hours</a></li>\n				<li><a href=\"#days\">Days</a></li>\n				<li><a href=\"#countries\">Countries</a></li>\n				<li><a href=\"#platforms\">Platforms</a></li>\n			</ul>\n		</div>\n		<div id=\"accordion\">\n		</div>\n	<div class=\"form-actions\">\n		<button type=\"button\" class=\"save btn btn-primary\">Save changes</button>\n		<button type=\"button\" class=\"cancel btn\">Cancel</button>\n	</div>\n\n\n\n</form>";
     return buffer;});
 }});
 
@@ -2045,19 +2096,76 @@ window.require.define({"views/templates/login": function(exports, require, modul
 window.require.define({"views/templates/rule/countries": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    var foundHelper, self=this;
+    var buffer = "", stack1, stack2, foundHelper, tmp1, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
+  function program1(depth0,data) {
+    
+    var buffer = "", stack1, stack2;
+    buffer += "\n		";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    stack2 = helpers['if'];
+    tmp1 = self.program(2, program2, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n	";
+    return buffer;}
+  function program2(depth0,data) {
+    
+    var buffer = "", stack1;
+    buffer += "<li data-country='";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "'>";
+    foundHelper = helpers.name;
+    stack1 = foundHelper || depth0.name;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "<i class=\"icon-trash\"></i></li>";
+    return buffer;}
 
-    return "\n<div class=\"form-actions\">\n	<button type=\"submit\" class=\"btn btn-primary save\">Save changes</button>\n	<button type=\"button\" class=\"btn cancel\">Cancel</button>\n</div>\n";});
+    buffer += "<h3>";
+    foundHelper = helpers.title;
+    stack1 = foundHelper || depth0.title;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"ruleContent\">\n<select name=\"Country\" id=\"country-selector\" autofocus=\"autofocus\" autocorrect=\"off\" autocomplete=\"off\">\n<option value=\"\" selected=\"selected\">Select Country</option>\n<option value=\"Afghanistan\" data-alternative-spellings=\"AF افغانستان\">Afghanistan</option>\n<option value=\"Åland Islands\" data-alternative-spellings=\"AX Aaland Aland\" data-relevancy-booster=\"0.5\">Åland Islands</option>\n<option value=\"Albania\" data-alternative-spellings=\"AL\">Albania</option>\n<option value=\"Algeria\" data-alternative-spellings=\"DZ الجزائر\">Algeria</option>\n<option value=\"American Samoa\" data-alternative-spellings=\"AS\" data-relevancy-booster=\"0.5\">American Samoa</option>\n<option value=\"Andorra\" data-alternative-spellings=\"AD\" data-relevancy-booster=\"0.5\">Andorra</option>\n<option value=\"Angola\" data-alternative-spellings=\"AO\">Angola</option>\n<option value=\"Anguilla\" data-alternative-spellings=\"AI\" data-relevancy-booster=\"0.5\">Anguilla</option>\n<option value=\"Antarctica\" data-alternative-spellings=\"AQ\" data-relevancy-booster=\"0.5\">Antarctica</option>\n<option value=\"Antigua And Barbuda\" data-alternative-spellings=\"AG\" data-relevancy-booster=\"0.5\">Antigua And Barbuda</option>\n<option value=\"Argentina\" data-alternative-spellings=\"AR\">Argentina</option>\n<option value=\"Armenia\" data-alternative-spellings=\"AM Հայաստան\">Armenia</option>\n<option value=\"Aruba\" data-alternative-spellings=\"AW\" data-relevancy-booster=\"0.5\">Aruba</option>\n<option value=\"Australia\" data-alternative-spellings=\"AU\" data-relevancy-booster=\"1.5\">Australia</option>\n<option value=\"Austria\" data-alternative-spellings=\"AT Österreich Osterreich Oesterreich \">Austria</option>\n<option value=\"Azerbaijan\" data-alternative-spellings=\"AZ\">Azerbaijan</option>\n<option value=\"Bahamas\" data-alternative-spellings=\"BS\">Bahamas</option>\n<option value=\"Bahrain\" data-alternative-spellings=\"BH البحرين\">Bahrain</option>\n<option value=\"Bangladesh\" data-alternative-spellings=\"BD বাংলাদেশ\" data-relevancy-booster=\"2\">Bangladesh</option>\n<option value=\"Barbados\" data-alternative-spellings=\"BB\">Barbados</option>\n<option value=\"Belarus\" data-alternative-spellings=\"BY Беларусь\">Belarus</option>\n<option value=\"Belgium\" data-alternative-spellings=\"BE België Belgie Belgien Belgique\" data-relevancy-booster=\"1.5\">Belgium</option>\n<option value=\"Belize\" data-alternative-spellings=\"BZ\">Belize</option>\n<option value=\"Benin\" data-alternative-spellings=\"BJ\">Benin</option>\n<option value=\"Bermuda\" data-alternative-spellings=\"BM\" data-relevancy-booster=\"0.5\">Bermuda</option>\n<option value=\"Bhutan\" data-alternative-spellings=\"BT भूटान\">Bhutan</option>\n<option value=\"Bolivia\" data-alternative-spellings=\"BO\">Bolivia</option>\n<option value=\"Bonaire, Sint Eustatius and Saba\" data-alternative-spellings=\"BQ\">Bonaire, Sint Eustatius and Saba</option>\n<option value=\"Bosnia and Herzegovina\" data-alternative-spellings=\"BA Босна и Херцеговина\">Bosnia and Herzegovina</option>\n<option value=\"Botswana\" data-alternative-spellings=\"BW\">Botswana</option>\n<option value=\"Bouvet Island\" data-alternative-spellings=\"BV\">Bouvet Island</option>\n<option value=\"Brazil\" data-alternative-spellings=\"BR Brasil\" data-relevancy-booster=\"2\">Brazil</option>\n<option value=\"British Indian Ocean Territory\" data-alternative-spellings=\"IO\">British Indian Ocean Territory</option>\n<option value=\"Brunei Darussalam\" data-alternative-spellings=\"BN\">Brunei Darussalam</option>\n<option value=\"Bulgaria\" data-alternative-spellings=\"BG България\">Bulgaria</option>\n<option value=\"Burkina Faso\" data-alternative-spellings=\"BF\">Burkina Faso</option>\n<option value=\"Burundi\" data-alternative-spellings=\"BI\">Burundi</option>\n<option value=\"Cambodia\" data-alternative-spellings=\"KH កម្ពុជា\">Cambodia</option>\n<option value=\"Cameroon\" data-alternative-spellings=\"CM\">Cameroon</option>\n<option value=\"Canada\" data-alternative-spellings=\"CA\" data-relevancy-booster=\"2\">Canada</option>\n<option value=\"Cape Verde\" data-alternative-spellings=\"CV Cabo\">Cape Verde</option>\n<option value=\"Cayman Islands\" data-alternative-spellings=\"KY\" data-relevancy-booster=\"0.5\">Cayman Islands</option>\n<option value=\"Central African Republic\" data-alternative-spellings=\"CF\">Central African Republic</option>\n<option value=\"Chad\" data-alternative-spellings=\"TD تشاد‎ Tchad\">Chad</option>\n<option value=\"Chile\" data-alternative-spellings=\"CL\">Chile</option>\n<option value=\"China\" data-relevancy-booster=\"3.5\" data-alternative-spellings=\"CN Zhongguo Zhonghua Peoples Republic 中国/中华\">China</option>\n<option value=\"Christmas Island\" data-alternative-spellings=\"CX\" data-relevancy-booster=\"0.5\">Christmas Island</option>\n<option value=\"Cocos (Keeling) Islands\" data-alternative-spellings=\"CC\" data-relevancy-booster=\"0.5\">Cocos (Keeling) Islands</option>\n<option value=\"Colombia\" data-alternative-spellings=\"CO\">Colombia</option>\n<option value=\"Comoros\" data-alternative-spellings=\"KM جزر القمر\">Comoros</option>\n<option value=\"Congo\" data-alternative-spellings=\"CG\">Congo</option>\n<option value=\"Congo, the Democratic Republic of the\" data-alternative-spellings=\"CD Congo-Brazzaville Repubilika ya Kongo\">Congo, the Democratic Republic of the</option>\n<option value=\"Cook Islands\" data-alternative-spellings=\"CK\" data-relevancy-booster=\"0.5\">Cook Islands</option>\n<option value=\"Costa Rica\" data-alternative-spellings=\"CR\">Costa Rica</option>\n<option value=\"Côte d'Ivoire\" data-alternative-spellings=\"CI Cote dIvoire\">Côte d'Ivoire</option>\n<option value=\"Croatia\" data-alternative-spellings=\"HR Hrvatska\">Croatia</option>\n<option value=\"Cuba\" data-alternative-spellings=\"CU\">Cuba</option>\n<option value=\"Curaçao\" data-alternative-spellings=\"CW Curacao\">Curaçao</option>\n<option value=\"Cyprus\" data-alternative-spellings=\"CY Κύπρος Kýpros Kıbrıs\">Cyprus</option>\n<option value=\"Czech Republic\" data-alternative-spellings=\"CZ Česká Ceska\">Czech Republic</option>\n<option value=\"Denmark\" data-alternative-spellings=\"DK Danmark\" data-relevancy-booster=\"1.5\">Denmark</option>\n<option value=\"Djibouti\" data-alternative-spellings=\"DJ جيبوتي‎ Jabuuti Gabuuti\">Djibouti</option>\n<option value=\"Dominica\" data-alternative-spellings=\"DM Dominique\" data-relevancy-booster=\"0.5\">Dominica</option>\n<option value=\"Dominican Republic\" data-alternative-spellings=\"DO\">Dominican Republic</option>\n<option value=\"Ecuador\" data-alternative-spellings=\"EC\">Ecuador</option>\n<option value=\"Egypt\" data-alternative-spellings=\"EG\" data-relevancy-booster=\"1.5\">Egypt</option>\n<option value=\"El Salvador\" data-alternative-spellings=\"SV\">El Salvador</option>\n<option value=\"Equatorial Guinea\" data-alternative-spellings=\"GQ\">Equatorial Guinea</option>\n<option value=\"Eritrea\" data-alternative-spellings=\"ER إرتريا ኤርትራ\">Eritrea</option>\n<option value=\"Estonia\" data-alternative-spellings=\"EE Eesti\">Estonia</option>\n<option value=\"Ethiopia\" data-alternative-spellings=\"ET ኢትዮጵያ\">Ethiopia</option>\n<option value=\"Falkland Islands (Malvinas)\" data-alternative-spellings=\"FK\" data-relevancy-booster=\"0.5\">Falkland Islands (Malvinas)</option>\n<option value=\"Faroe Islands\" data-alternative-spellings=\"FO Føroyar Færøerne\" data-relevancy-booster=\"0.5\">Faroe Islands</option>\n<option value=\"Fiji\" data-alternative-spellings=\"FJ Viti फ़िजी\">Fiji</option>\n<option value=\"Finland\" data-alternative-spellings=\"FI Suomi\">Finland</option>\n<option value=\"France\" data-alternative-spellings=\"FR République française\" data-relevancy-booster=\"2.5\">France</option>\n<option value=\"French Guiana\" data-alternative-spellings=\"GF\">French Guiana</option>\n<option value=\"French Polynesia\" data-alternative-spellings=\"PF Polynésie française\">French Polynesia</option>\n<option value=\"French Southern Territories\" data-alternative-spellings=\"TF\">French Southern Territories</option>\n<option value=\"Gabon\" data-alternative-spellings=\"GA République Gabonaise\">Gabon</option>\n<option value=\"Gambia\" data-alternative-spellings=\"GM\">Gambia</option>\n<option value=\"Georgia\" data-alternative-spellings=\"GE საქართველო\">Georgia</option>\n<option value=\"Germany\" data-alternative-spellings=\"DE Bundesrepublik Deutschland\" data-relevancy-booster=\"3\">Germany</option>\n<option value=\"Ghana\" data-alternative-spellings=\"GH\">Ghana</option>\n<option value=\"Gibraltar\" data-alternative-spellings=\"GI\" data-relevancy-booster=\"0.5\">Gibraltar</option>\n<option value=\"Greece\" data-alternative-spellings=\"GR Ελλάδα\" data-relevancy-booster=\"1.5\">Greece</option>\n<option value=\"Greenland\" data-alternative-spellings=\"GL grønland\" data-relevancy-booster=\"0.5\">Greenland</option>\n<option value=\"Grenada\" data-alternative-spellings=\"GD\">Grenada</option>\n<option value=\"Guadeloupe\" data-alternative-spellings=\"GP\">Guadeloupe</option>\n<option value=\"Guam\" data-alternative-spellings=\"GU\">Guam</option>\n<option value=\"Guatemala\" data-alternative-spellings=\"GT\">Guatemala</option>\n<option value=\"Guernsey\" data-alternative-spellings=\"GG\" data-relevancy-booster=\"0.5\">Guernsey</option>\n<option value=\"Guinea\" data-alternative-spellings=\"GN\">Guinea</option>\n<option value=\"Guinea-Bissau\" data-alternative-spellings=\"GW\">Guinea-Bissau</option>\n<option value=\"Guyana\" data-alternative-spellings=\"GY\">Guyana</option>\n<option value=\"Haiti\" data-alternative-spellings=\"HT\">Haiti</option>\n<option value=\"Heard Island and McDonald Islands\" data-alternative-spellings=\"HM\">Heard Island and McDonald Islands</option>\n<option value=\"Holy See (Vatican City State)\" data-alternative-spellings=\"VA\" data-relevancy-booster=\"0.5\">Holy See (Vatican City State)</option>\n<option value=\"Honduras\" data-alternative-spellings=\"HN\">Honduras</option>\n<option value=\"Hong Kong\" data-alternative-spellings=\"HK 香港\">Hong Kong</option>\n<option value=\"Hungary\" data-alternative-spellings=\"HU Magyarország\">Hungary</option>\n<option value=\"Iceland\" data-alternative-spellings=\"IS Island\">Iceland</option>\n<option value=\"India\" data-alternative-spellings=\"IN भारत गणराज्य Hindustan\" data-relevancy-booster=\"3\">India</option>\n<option value=\"Indonesia\" data-alternative-spellings=\"ID\" data-relevancy-booster=\"2\">Indonesia</option>\n<option value=\"Iran, Islamic Republic of\" data-alternative-spellings=\"IR ایران\">Iran, Islamic Republic of</option>\n<option value=\"Iraq\" data-alternative-spellings=\"IQ العراق‎\">Iraq</option>\n<option value=\"Ireland\" data-alternative-spellings=\"IE Éire\" data-relevancy-booster=\"1.2\">Ireland</option>\n<option value=\"Isle of Man\" data-alternative-spellings=\"IM\" data-relevancy-booster=\"0.5\">Isle of Man</option>\n<option value=\"Israel\" data-alternative-spellings=\"IL إسرائيل ישראל\">Israel</option>\n<option value=\"Italy\" data-alternative-spellings=\"IT Italia\" data-relevancy-booster=\"2\">Italy</option>\n<option value=\"Jamaica\" data-alternative-spellings=\"JM\">Jamaica</option>\n<option value=\"Japan\" data-alternative-spellings=\"JP Nippon Nihon 日本\" data-relevancy-booster=\"2.5\">Japan</option>\n<option value=\"Jersey\" data-alternative-spellings=\"JE\" data-relevancy-booster=\"0.5\">Jersey</option>\n<option value=\"Jordan\" data-alternative-spellings=\"JO الأردن\">Jordan</option>\n<option value=\"Kazakhstan\" data-alternative-spellings=\"KZ Қазақстан Казахстан\">Kazakhstan</option>\n<option value=\"Kenya\" data-alternative-spellings=\"KE\">Kenya</option>\n<option value=\"Kiribati\" data-alternative-spellings=\"KI\">Kiribati</option>\n<option value=\"Korea, Democratic People's Republic of\" data-alternative-spellings=\"KP North Korea\">Korea, Democratic People's Republic of</option>\n<option value=\"Korea, Republic of\" data-alternative-spellings=\"KR South Korea\" data-relevancy-booster=\"1.5\">Korea, Republic of</option>\n<option value=\"Kuwait\" data-alternative-spellings=\"KW الكويت\">Kuwait</option>\n<option value=\"Kyrgyzstan\" data-alternative-spellings=\"KG Кыргызстан\">Kyrgyzstan</option>\n<option value=\"Lao People's Democratic Republic\" data-alternative-spellings=\"LA\">Lao People's Democratic Republic</option>\n<option value=\"Latvia\" data-alternative-spellings=\"LV Latvija\">Latvia</option>\n<option value=\"Lebanon\" data-alternative-spellings=\"LB لبنان\">Lebanon</option>\n<option value=\"Lesotho\" data-alternative-spellings=\"LS\">Lesotho</option>\n<option value=\"Liberia\" data-alternative-spellings=\"LR\">Liberia</option>\n<option value=\"Libyan Arab Jamahiriya\" data-alternative-spellings=\"LY ليبيا\">Libyan Arab Jamahiriya</option>\n<option value=\"Liechtenstein\" data-alternative-spellings=\"LI\">Liechtenstein</option>\n<option value=\"Lithuania\" data-alternative-spellings=\"LT Lietuva\">Lithuania</option>\n<option value=\"Luxembourg\" data-alternative-spellings=\"LU\">Luxembourg</option>\n<option value=\"Macao\" data-alternative-spellings=\"MO\">Macao</option>\n<option value=\"Macedonia, The Former Yugoslav Republic Of\" data-alternative-spellings=\"MK Македонија\">Macedonia, The Former Yugoslav Republic Of</option>\n<option value=\"Madagascar\" data-alternative-spellings=\"MG Madagasikara\">Madagascar</option>\n<option value=\"Malawi\" data-alternative-spellings=\"MW\">Malawi</option>\n<option value=\"Malaysia\" data-alternative-spellings=\"MY\">Malaysia</option>\n<option value=\"Maldives\" data-alternative-spellings=\"MV\">Maldives</option>\n<option value=\"Mali\" data-alternative-spellings=\"ML\">Mali</option>\n<option value=\"Malta\" data-alternative-spellings=\"MT\">Malta</option>\n<option value=\"Marshall Islands\" data-alternative-spellings=\"MH\" data-relevancy-booster=\"0.5\">Marshall Islands</option>\n<option value=\"Martinique\" data-alternative-spellings=\"MQ\">Martinique</option>\n<option value=\"Mauritania\" data-alternative-spellings=\"MR الموريتانية\">Mauritania</option>\n<option value=\"Mauritius\" data-alternative-spellings=\"MU\">Mauritius</option>\n<option value=\"Mayotte\" data-alternative-spellings=\"YT\">Mayotte</option>\n<option value=\"Mexico\" data-alternative-spellings=\"MX Mexicanos\" data-relevancy-booster=\"1.5\">Mexico</option>\n<option value=\"Micronesia, Federated States of\" data-alternative-spellings=\"FM\">Micronesia, Federated States of</option>\n<option value=\"Moldova, Republic of\" data-alternative-spellings=\"MD\">Moldova, Republic of</option>\n<option value=\"Monaco\" data-alternative-spellings=\"MC\">Monaco</option>\n<option value=\"Mongolia\" data-alternative-spellings=\"MN Mongγol ulus Монгол улс\">Mongolia</option>\n<option value=\"Montenegro\" data-alternative-spellings=\"ME\">Montenegro</option>\n<option value=\"Montserrat\" data-alternative-spellings=\"MS\" data-relevancy-booster=\"0.5\">Montserrat</option>\n<option value=\"Morocco\" data-alternative-spellings=\"MA المغرب\">Morocco</option>\n<option value=\"Mozambique\" data-alternative-spellings=\"MZ Moçambique\">Mozambique</option>\n<option value=\"Myanmar\" data-alternative-spellings=\"MM\">Myanmar</option>\n<option value=\"Namibia\" data-alternative-spellings=\"NA Namibië\">Namibia</option>\n<option value=\"Nauru\" data-alternative-spellings=\"NR Naoero\" data-relevancy-booster=\"0.5\">Nauru</option>\n<option value=\"Nepal\" data-alternative-spellings=\"NP नेपाल\">Nepal</option>\n<option value=\"Netherlands\" data-alternative-spellings=\"NL Holland Nederland\" data-relevancy-booster=\"1.5\">Netherlands</option>\n<option value=\"New Caledonia\" data-alternative-spellings=\"NC\" data-relevancy-booster=\"0.5\">New Caledonia</option>\n<option value=\"New Zealand\" data-alternative-spellings=\"NZ Aotearoa\">New Zealand</option>\n<option value=\"Nicaragua\" data-alternative-spellings=\"NI\">Nicaragua</option>\n<option value=\"Niger\" data-alternative-spellings=\"NE Nijar\">Niger</option>\n<option value=\"Nigeria\" data-alternative-spellings=\"NG Nijeriya Naíjíríà\" data-relevancy-booster=\"1.5\">Nigeria</option>\n<option value=\"Niue\" data-alternative-spellings=\"NU\" data-relevancy-booster=\"0.5\">Niue</option>\n<option value=\"Norfolk Island\" data-alternative-spellings=\"NF\" data-relevancy-booster=\"0.5\">Norfolk Island</option>\n<option value=\"Northern Mariana Islands\" data-alternative-spellings=\"MP\" data-relevancy-booster=\"0.5\">Northern Mariana Islands</option>\n<option value=\"Norway\" data-alternative-spellings=\"NO Norge Noreg\" data-relevancy-booster=\"1.5\">Norway</option>\n<option value=\"Oman\" data-alternative-spellings=\"OM عمان\">Oman</option>\n<option value=\"Pakistan\" data-alternative-spellings=\"PK پاکستان\" data-relevancy-booster=\"2\">Pakistan</option>\n<option value=\"Palau\" data-alternative-spellings=\"PW\" data-relevancy-booster=\"0.5\">Palau</option>\n<option value=\"Palestinian Territory, Occupied\" data-alternative-spellings=\"PS فلسطين\">Palestinian Territory, Occupied</option>\n<option value=\"Panama\" data-alternative-spellings=\"PA\">Panama</option>\n<option value=\"Papua New Guinea\" data-alternative-spellings=\"PG\">Papua New Guinea</option>\n<option value=\"Paraguay\" data-alternative-spellings=\"PY\">Paraguay</option>\n<option value=\"Peru\" data-alternative-spellings=\"PE\">Peru</option>\n<option value=\"Philippines\" data-alternative-spellings=\"PH Pilipinas\" data-relevancy-booster=\"1.5\">Philippines</option>\n<option value=\"Pitcairn\" data-alternative-spellings=\"PN\" data-relevancy-booster=\"0.5\">Pitcairn</option>\n<option value=\"Poland\" data-alternative-spellings=\"PL Polska\" data-relevancy-booster=\"1.25\">Poland</option>\n<option value=\"Portugal\" data-alternative-spellings=\"PT Portuguesa\" data-relevancy-booster=\"1.5\">Portugal</option>\n<option value=\"Puerto Rico\" data-alternative-spellings=\"PR\">Puerto Rico</option>\n<option value=\"Qatar\" data-alternative-spellings=\"QA قطر\">Qatar</option>\n<option value=\"Réunion\" data-alternative-spellings=\"RE Reunion\">Réunion</option>\n<option value=\"Romania\" data-alternative-spellings=\"RO Rumania Roumania România\">Romania</option>\n<option value=\"Russian Federation\" data-alternative-spellings=\"RU Rossiya Российская Россия\" data-relevancy-booster=\"2.5\">Russian Federation</option>\n<option value=\"Rwanda\" data-alternative-spellings=\"RW\">Rwanda</option>\n<option value=\"Saint Barthélemy\" data-alternative-spellings=\"BL St. Barthelemy\">Saint Barthélemy</option>\n<option value=\"Saint Helena\" data-alternative-spellings=\"SH St.\">Saint Helena</option>\n<option value=\"Saint Kitts and Nevis\" data-alternative-spellings=\"KN St.\">Saint Kitts and Nevis</option>\n<option value=\"Saint Lucia\" data-alternative-spellings=\"LC St.\">Saint Lucia</option>\n<option value=\"Saint Martin (French Part)\" data-alternative-spellings=\"MF St.\">Saint Martin (French Part)</option>\n<option value=\"Saint Pierre and Miquelon\" data-alternative-spellings=\"PM St.\">Saint Pierre and Miquelon</option>\n<option value=\"Saint Vincent and the Grenadines\" data-alternative-spellings=\"VC St.\">Saint Vincent and the Grenadines</option>\n<option value=\"Samoa\" data-alternative-spellings=\"WS\">Samoa</option>\n<option value=\"San Marino\" data-alternative-spellings=\"SM\">San Marino</option>\n<option value=\"Sao Tome and Principe\" data-alternative-spellings=\"ST\">Sao Tome and Principe</option>\n<option value=\"Saudi Arabia\" data-alternative-spellings=\"SA السعودية\">Saudi Arabia</option>\n<option value=\"Senegal\" data-alternative-spellings=\"SN Sénégal\">Senegal</option>\n<option value=\"Serbia\" data-alternative-spellings=\"RS Србија Srbija\">Serbia</option>\n<option value=\"Seychelles\" data-alternative-spellings=\"SC\" data-relevancy-booster=\"0.5\">Seychelles</option>\n<option value=\"Sierra Leone\" data-alternative-spellings=\"SL\">Sierra Leone</option>\n<option value=\"Singapore\" data-alternative-spellings=\"SG Singapura சிங்கப்பூர் குடியரசு 新加坡共和国\">Singapore</option>\n<option value=\"Sint Maarten (Dutch Part)\" data-alternative-spellings=\"SX\">Sint Maarten (Dutch Part)</option>\n<option value=\"Slovakia\" data-alternative-spellings=\"SK Slovenská Slovensko\">Slovakia</option>\n<option value=\"Slovenia\" data-alternative-spellings=\"SI Slovenija\">Slovenia</option>\n<option value=\"Solomon Islands\" data-alternative-spellings=\"SB\">Solomon Islands</option>\n<option value=\"Somalia\" data-alternative-spellings=\"SO الصومال\">Somalia</option>\n<option value=\"South Africa\" data-alternative-spellings=\"ZA RSA Suid-Afrika\">South Africa</option>\n<option value=\"South Georgia and the South Sandwich Islands\" data-alternative-spellings=\"GS\">South Georgia and the South Sandwich Islands</option>\n<option value=\"South Sudan\" data-alternative-spellings=\"SS\">South Sudan</option>\n<option value=\"Spain\" data-alternative-spellings=\"ES España\" data-relevancy-booster=\"2\">Spain</option>\n<option value=\"Sri Lanka\" data-alternative-spellings=\"LK ශ්‍රී ලංකා இலங்கை Ceylon\">Sri Lanka</option>\n<option value=\"Sudan\" data-alternative-spellings=\"SD السودان\">Sudan</option>\n<option value=\"Suriname\" data-alternative-spellings=\"SR शर्नम् Sarnam Sranangron\">Suriname</option>\n<option value=\"Svalbard and Jan Mayen\" data-alternative-spellings=\"SJ\" data-relevancy-booster=\"0.5\">Svalbard and Jan Mayen</option>\n<option value=\"Swaziland\" data-alternative-spellings=\"SZ weSwatini Swatini Ngwane\">Swaziland</option>\n<option value=\"Sweden\" data-alternative-spellings=\"SE Sverige\" data-relevancy-booster=\"1.5\">Sweden</option>\n<option value=\"Switzerland\" data-alternative-spellings=\"CH Swiss Confederation Schweiz Suisse Svizzera Svizra\" data-relevancy-booster=\"1.5\">Switzerland</option>\n<option value=\"Syrian Arab Republic\" data-alternative-spellings=\"SY Syria سورية\">Syrian Arab Republic</option>\n<option value=\"Taiwan, Province of China\" data-alternative-spellings=\"TW 台灣 臺灣\">Taiwan, Province of China</option>\n<option value=\"Tajikistan\" data-alternative-spellings=\"TJ Тоҷикистон Toçikiston\">Tajikistan</option>\n<option value=\"Tanzania, United Republic of\" data-alternative-spellings=\"TZ\">Tanzania, United Republic of</option>\n<option value=\"Thailand\" data-alternative-spellings=\"TH ประเทศไทย Prathet Thai\">Thailand</option>\n<option value=\"Timor-Leste\" data-alternative-spellings=\"TL\">Timor-Leste</option>\n<option value=\"Togo\" data-alternative-spellings=\"TG Togolese\">Togo</option>\n<option value=\"Tokelau\" data-alternative-spellings=\"TK\" data-relevancy-booster=\"0.5\">Tokelau</option>\n<option value=\"Tonga\" data-alternative-spellings=\"TO\">Tonga</option>\n<option value=\"Trinidad and Tobago\" data-alternative-spellings=\"TT\">Trinidad and Tobago</option>\n<option value=\"Tunisia\" data-alternative-spellings=\"TN تونس\">Tunisia</option>\n<option value=\"Turkey\" data-alternative-spellings=\"TR Türkiye Turkiye\">Turkey</option>\n<option value=\"Turkmenistan\" data-alternative-spellings=\"TM Türkmenistan\">Turkmenistan</option>\n<option value=\"Turks and Caicos Islands\" data-alternative-spellings=\"TC\" data-relevancy-booster=\"0.5\">Turks and Caicos Islands</option>\n<option value=\"Tuvalu\" data-alternative-spellings=\"TV\" data-relevancy-booster=\"0.5\">Tuvalu</option>\n<option value=\"Uganda\" data-alternative-spellings=\"UG\">Uganda</option>\n<option value=\"Ukraine\" data-alternative-spellings=\"UA Ukrayina Україна\">Ukraine</option>\n<option value=\"United Arab Emirates\" data-alternative-spellings=\"AE UAE الإمارات\">United Arab Emirates</option>\n<option value=\"United Kingdom\" data-alternative-spellings=\"GB Great Britain England UK Wales Scotland Northern Ireland\" data-relevancy-booster=\"2.5\">United Kingdom</option>\n<option value=\"United States\" data-relevancy-booster=\"3.5\" data-alternative-spellings=\"US USA United States of America\">United States</option>\n<option value=\"United States Minor Outlying Islands\" data-alternative-spellings=\"UM\">United States Minor Outlying Islands</option>\n<option value=\"Uruguay\" data-alternative-spellings=\"UY\">Uruguay</option>\n<option value=\"Uzbekistan\" data-alternative-spellings=\"UZ Ўзбекистон O'zbekstan O‘zbekiston\">Uzbekistan</option>\n<option value=\"Vanuatu\" data-alternative-spellings=\"VU\">Vanuatu</option>\n<option value=\"Venezuela\" data-alternative-spellings=\"VE\">Venezuela</option>\n<option value=\"Vietnam\" data-alternative-spellings=\"VN Việt Nam\" data-relevancy-booster=\"1.5\">Vietnam</option>\n<option value=\"Virgin Islands, British\" data-alternative-spellings=\"VG\" data-relevancy-booster=\"0.5\">Virgin Islands, British</option>\n<option value=\"Virgin Islands, U.S.\" data-alternative-spellings=\"VI\" data-relevancy-booster=\"0.5\">Virgin Islands, U.S.</option>\n<option value=\"Wallis and Futuna\" data-alternative-spellings=\"WF\" data-relevancy-booster=\"0.5\">Wallis and Futuna</option>\n<option value=\"Western Sahara\" data-alternative-spellings=\"EH لصحراء الغربية\">Western Sahara</option>\n<option value=\"Yemen\" data-alternative-spellings=\"YE اليمن\">Yemen</option>\n<option value=\"Zambia\" data-alternative-spellings=\"ZM\">Zambia</option>\n<option value=\"Zimbabwe\" data-alternative-spellings=\"ZW\">Zimbabwe</option>\n</select>\n<button type=\"button\" class=\"btn\">Add</button>\n<input type=\"hidden\" name=\"countyHidden\" id=\"countyHidden\" value=\"";
+    foundHelper = helpers.countryArr;
+    stack1 = foundHelper || depth0.countryArr;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "countryArr", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "\" />\n<ul class=\"countries\">\n	";
+    foundHelper = helpers.inputs;
+    stack1 = foundHelper || depth0.inputs;
+    stack2 = helpers.each;
+    tmp1 = self.program(1, program1, data);
+    tmp1.hash = {};
+    tmp1.fn = tmp1;
+    tmp1.inverse = self.noop;
+    stack1 = stack2.call(depth0, stack1, tmp1);
+    if(stack1 || stack1 === 0) { buffer += stack1; }
+    buffer += "\n</ul>\n</div>";
+    return buffer;});
 }});
 
 window.require.define({"views/templates/rule/date": function(exports, require, module) {
   module.exports = Handlebars.template(function (Handlebars,depth0,helpers,partials,data) {
     helpers = helpers || Handlebars.helpers;
-    var foundHelper, self=this;
+    var buffer = "", stack1, foundHelper, self=this, functionType="function", helperMissing=helpers.helperMissing, undef=void 0, escapeExpression=this.escapeExpression;
 
 
-    return "<div class=\"datepicker\"></div>\n";});
+    buffer += "<h3>";
+    foundHelper = helpers.title;
+    stack1 = foundHelper || depth0.title;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"ruleContent\">\n	<div class=\"datepicker\"></div>\n</div>\n";
+    return buffer;});
 }});
 
 window.require.define({"views/templates/rule/days": function(exports, require, module) {
@@ -2068,7 +2176,7 @@ window.require.define({"views/templates/rule/days": function(exports, require, m
   function program1(depth0,data) {
     
     var buffer = "", stack1, stack2;
-    buffer += "\n	<input type=\"checkbox\" id=\"days_";
+    buffer += "\n		<input type=\"checkbox\" id=\"days_";
     foundHelper = helpers.name;
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
@@ -2098,14 +2206,19 @@ window.require.define({"views/templates/rule/days": function(exports, require, m
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "	</label>\n	";
+    buffer += escapeExpression(stack1) + "	</label>\n		";
     return buffer;}
   function program2(depth0,data) {
     
     
     return "checked=\"checked\" ";}
 
-    buffer += "<div class=\"inputs\" id=\"daysInputs\">\n	";
+    buffer += "\n<h3>";
+    foundHelper = helpers.title;
+    stack1 = foundHelper || depth0.title;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"ruleContent\">\n	<div class=\"inputs\" id=\"daysInputs\">\n		";
     foundHelper = helpers.inputs;
     stack1 = foundHelper || depth0.inputs;
     stack2 = helpers.each;
@@ -2115,7 +2228,7 @@ window.require.define({"views/templates/rule/days": function(exports, require, m
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n</div>\n\n";
+    buffer += "\n	</div>\n</div>\n";
     return buffer;});
 }});
 
@@ -2157,14 +2270,19 @@ window.require.define({"views/templates/rule/hours": function(exports, require, 
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "	</label>\n	";
+    buffer += escapeExpression(stack1) + "	</label>\n		";
     return buffer;}
   function program2(depth0,data) {
     
     
     return "checked=\"checked\" ";}
 
-    buffer += "<div class=\"inputs\" id=\"hoursInputs\">\n	";
+    buffer += "<h3>";
+    foundHelper = helpers.title;
+    stack1 = foundHelper || depth0.title;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"ruleContent\">\n	<div class=\"inputs\" id=\"hoursInputs\">\n		";
     foundHelper = helpers.inputs;
     stack1 = foundHelper || depth0.inputs;
     stack2 = helpers.each;
@@ -2174,7 +2292,7 @@ window.require.define({"views/templates/rule/hours": function(exports, require, 
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n</div>\n\n";
+    buffer += "\n	</div>\n</div>\n";
     return buffer;});
 }});
 
@@ -2216,14 +2334,19 @@ window.require.define({"views/templates/rule/platforms": function(exports, requi
     stack1 = foundHelper || depth0.name;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "name", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "	</label>\n	";
+    buffer += escapeExpression(stack1) + "	</label>\n		";
     return buffer;}
   function program2(depth0,data) {
     
     
     return "checked=\"checked\" ";}
 
-    buffer += "<div class=\"inputs\" id=\"platformsInputs\">\n	";
+    buffer += "<h3>";
+    foundHelper = helpers.title;
+    stack1 = foundHelper || depth0.title;
+    if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
+    else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "title", { hash: {} }); }
+    buffer += escapeExpression(stack1) + "</h3>\n<div class=\"ruleContent\">\n	<div class=\"inputs\" id=\"platformsInputs\">\n		";
     foundHelper = helpers.inputs;
     stack1 = foundHelper || depth0.inputs;
     stack2 = helpers.each;
@@ -2233,7 +2356,7 @@ window.require.define({"views/templates/rule/platforms": function(exports, requi
     tmp1.inverse = self.noop;
     stack1 = stack2.call(depth0, stack1, tmp1);
     if(stack1 || stack1 === 0) { buffer += stack1; }
-    buffer += "\n</div>\n";
+    buffer += "\n	</div>\n</div>\n\n";
     return buffer;});
 }});
 

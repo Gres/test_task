@@ -38,14 +38,15 @@ module.exports = class daysView extends View
 
 		if !@options.new
 			array=@model.get(@options.rule).split(",")
-			_.each(array, (val)	=>
-				_.each(@defaults,(defval,defkey)=>
-					if @defaults[defkey].name is 1
-						@defaults[defkey].checked=true
-				)
+			_.each(array, (val,key)	=>
+				if array[key] is '1'
+					@defaults[key].checked=true
+
 			)
 
-		@data=inputs: @defaults
+		@data=
+			inputs: @defaults
+			title: @options.rule
 		@on 'addedToDOM', =>
 			$("#daysInputs").buttonset();
 	saveRule:->

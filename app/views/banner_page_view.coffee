@@ -17,18 +17,41 @@ module.exports = class BannerPageView extends PageView
 	autoRender: true
 	events:
 		"click #add_rule_button a": "addRule"
+
 	initialize: ->
 		super
+		@delegate 'click', '.save', @save
 		@separateRules()
+	save:->
+		values=new Array()
+		self=@
+		$(@$el.find(".modelInput")).each(	->
+			values.push()
+			if $(@).val() or $(@).val() is 0
+				self.model.set($(@).attr("name"),$(@).val())
+		)
+		for otherName, otherView of @subviewsByName
+			otherView.saveRule()
+		@model.set("rules",null)
+		@model.save()
+	cancel:->
+
 	afterRender:->
 		super
 		@renderSubviews()
+		$( "#accordion" ).accordion({
+			header:"h3"
+			heightStyle:"content"
+		});
 	separateRules:->
 		rules=_.extend({}, @model.attributes)
 		#create separate property for rules in model
 		delete rules.rules
 		delete rules.id
 		delete rules.name
+		delete rules.price
+		delete rules.vendor
+		delete rules.count
 		@model.set("rules",rules)
 	renderSubviews:->
 		rules=@model.get("rules")
@@ -37,11 +60,11 @@ module.exports = class BannerPageView extends PageView
 				@subview ruleId, new rulesViews[ruleId]
 					autoRender: yes
 					new: true if value is "-"
-					containerMethod: 'html'
-					className: "well rule #{ruleId}"
+					containerMethod: 'append'
+					className: "rule #{ruleId}"
 					rule:ruleId
 					model: @model
-					container: $("#rules_nav_#{ruleId}")
+					container: $("#accordion")
 		)
 	addRule:(e)->
 		el=$(e.currentTarget)
@@ -51,5 +74,5 @@ module.exports = class BannerPageView extends PageView
 		@separateRules()
 		@render()
 
-		$("#ruletabs a[href='#rules_nav_#{ruleId}']").tab('show');
+
 		false

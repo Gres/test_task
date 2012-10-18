@@ -28,7 +28,9 @@ module.exports = class platformsView extends View
 				)
 			)
 
-		@data=inputs: @defaults
+		@data=
+			inputs: @defaults
+			title: @options.rule
 		@on 'addedToDOM', =>
 			$("#platformsInputs").buttonset();
 	saveRule:->
