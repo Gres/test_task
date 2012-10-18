@@ -12,10 +12,18 @@ module.exports = class BannerNewView extends View
 		)
 	addNewBanner:->
 		name=@$el.find(".name").val()
-		@collection.create(
+		@collection.create({
 			name:name
+		},
 			success:(model, resp, options)=>
-				alert(model, resp, options)
+				name=model.get('name')
+				id=model.get('id')
+				$.pnotify(
+					pnotify_title: 'Banner created',
+					pnotify_text: "Banner #{name} with #{id} created",
+					pnotify_notice_icon: ''
+				)
+
 		)
 		@collection
 		false

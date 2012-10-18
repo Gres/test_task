@@ -38,6 +38,13 @@ module.exports = class BannerPageView extends PageView
 		$(".serialized").show()
 		@model.set("rules",null)
 		@model.save()
+		name=@model.get('name')
+		id=@model.get('id')
+		$.pnotify(
+			pnotify_title: 'Banner saved',
+			pnotify_text: "Banner #{name} with #{id} saved",
+			pnotify_notice_icon: ''
+		)
 	cancel:->
 
 	afterRender:->

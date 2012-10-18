@@ -16,8 +16,15 @@ module.exports = class BannerItem extends View
 
 		collection=@model.collection
 		@model.bind("remove", ->
-			@destroy(success:=>
-				alert(model, resp, options))
+			@destroy(success:(model, resp, options)=>
+				name=model.get('name')
+				id=model.get('id')
+				$.pnotify(
+					pnotify_title: 'Banner deleted',
+					pnotify_text: "Banner #{name} with #{id} deleted",
+					pnotify_notice_icon: ''
+				)
+			)
 		)
 		collection.remove(@model)
 

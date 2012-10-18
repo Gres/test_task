@@ -36,3 +36,102 @@
 .ui-timepicker-rtl{ direction: rtl; }
 .ui-timepicker-rtl dl { text-align: right; }
 .ui-timepicker-rtl dl dd { margin: 0 65px 10px 10px; }
+
+
+/* Notice
+----------------------------------*/
+.ui-pnotify {
+  top: 18px;
+  z-index: 9999;
+  right: 18px;
+  position: absolute;
+  height: auto;
+/* Ensure that the notices are on top of everything else. */
+
+}
+
+/* This hides position: fixed from IE6, which doesn't understand it. */
+html > body .ui-pnotify {
+  position: fixed;
+}
+
+.ui-pnotify .ui-pnotify-shadow {
+  margin: 0;
+
+  top: .1em;
+  left: .1em;
+  bottom: -.2em;
+  right: -.2em;
+  z-index: -1;
+}
+
+.ui-pnotify .ui-pnotify-container {
+  z-index: 9999;
+  padding: 8px 35px 8px 14px;
+  margin-bottom: 18px;
+
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+
+  border: 1px solid #d6e9c6;
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  color: #468847;
+  background: #dff0d8;
+}
+
+.ui-pnotify-closer, .ui-pnotify-sticker {
+  float: right;
+  margin-left: .2em;
+}
+
+.ui-pnotify-title {
+  display: block;
+  font-size: 1.2em;
+  line-height: 1;
+  font-weight: bold;
+  margin-bottom: .4em;
+}
+
+.ui-pnotify-text {
+  display: block;
+}
+
+.ui-pnotify-icon, .ui-pnotify-icon span {
+  display: block;
+  float: left;
+  margin-right: .2em;
+}
+
+/* History Pulldown
+----------------------------------*/
+.ui-pnotify-history-container {
+  position: absolute;
+  top: 0;
+  right: 18px;
+  width: 70px;
+  border-top: none;
+/* Ensure that the history container is on top of the notices. */
+  z-index: 10000;
+}
+
+.ui-pnotify-history-container .ui-pnotify-history-header {
+  padding: 2px;
+}
+
+.ui-pnotify-history-container button {
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+
+.ui-pnotify-history-container .ui-pnotify-history-pulldown {
+  display: block;
+  margin: 0 auto;
+}
+
+.ui-pnotify .ui-state-error {
+  color: #b94a48;
+  background: #f2dede;
+  border-color: #eed3d7;
+}
