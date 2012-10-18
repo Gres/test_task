@@ -10,12 +10,11 @@ module.exports = class BannersController extends Controller
 			collection: collection
 		)
 		collection.fetch()
-		console.info(collection)
 	banner:(route)->
 		id=route.id
 		collection = mediator.banners if !collection
 		collection.fetch()#
-		@model=collection.get(id)
+		model=collection.get(id)
 		@view = new BannerPage(
-			model: @model
+			model: model
 		)

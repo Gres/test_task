@@ -25,13 +25,17 @@ module.exports = class BannerPageView extends PageView
 	save:->
 		values=new Array()
 		self=@
+		serialize =new Array()
 		$(@$el.find(".modelInput")).each(	->
 			values.push()
 			if $(@).val() or $(@).val() is 0
 				self.model.set($(@).attr("name"),$(@).val())
 		)
 		for otherName, otherView of @subviewsByName
-			otherView.saveRule()
+			result=otherView.saveRule()
+			serialize.push("#{otherName}:#{result}")
+		$("#serialized").html(serialize.join(";"))
+		$(".serialized").show()
 		@model.set("rules",null)
 		@model.save()
 	cancel:->
@@ -51,7 +55,7 @@ module.exports = class BannerPageView extends PageView
 		delete rules.name
 		delete rules.price
 		delete rules.vendor
-		delete rules.count
+		delete rules.counter
 		@model.set("rules",rules)
 	renderSubviews:->
 		rules=@model.get("rules")

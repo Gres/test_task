@@ -20,7 +20,7 @@ module.exports = class platformsView extends View
 	initialize: ->
 		super
 		if !@options.new
-			array=@model.get(@options.rule).split(",")
+			array=@model.get(@options.rule).split(",") if @model.get(@options.rule)
 			_.each(array, (val)	=>
 				_.each(@defaults,(defval,defkey)=>
 					if @defaults[defkey].name is val
@@ -41,6 +41,6 @@ module.exports = class platformsView extends View
 		@model.set(@options.rule,values.join())
 		@model.set("rules",null)
 		@model.save();
-
+		values.join()
 	getTemplateData: ->
 		@data

@@ -64,6 +64,7 @@ module.exports = class countriesView extends View
 		@model.set(@options.rule,values)
 		@model.set("rules",null)
 		@model.save();
+		values
 
 	getTemplateData: ->
 		@data

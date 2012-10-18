@@ -75,7 +75,7 @@
 })();
 
 window.require.define({"application": function(exports, require, module) {
-  var Application, Chaplin, Layout, SessionController, StorageController, mediator, routes,
+  var Application, Chaplin, HeaderController, Layout, StorageController, mediator, routes,
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
@@ -85,7 +85,7 @@ window.require.define({"application": function(exports, require, module) {
 
   routes = require('routes');
 
-  SessionController = require('controllers/session_controller');
+  HeaderController = require('controllers/header_controller');
 
   StorageController = require('controllers/storage_controller');
 
@@ -99,7 +99,7 @@ window.require.define({"application": function(exports, require, module) {
       return Application.__super__.constructor.apply(this, arguments);
     }
 
-    Application.prototype.title = 'Brunch example application';
+    Application.prototype.title = 'Banner Management';
 
     Application.prototype.initialize = function() {
       Application.__super__.initialize.apply(this, arguments);
@@ -120,7 +120,7 @@ window.require.define({"application": function(exports, require, module) {
     };
 
     Application.prototype.initControllers = function() {
-      new SessionController();
+      new HeaderController();
       return new StorageController();
     };
 
@@ -165,20 +165,19 @@ window.require.define({"controllers/banners_controller": function(exports, requi
       this.view = new BannerItem({
         collection: collection
       });
-      collection.fetch();
-      return console.info(collection);
+      return collection.fetch();
     };
 
     BannersController.prototype.banner = function(route) {
-      var collection, id;
+      var collection, id, model;
       id = route.id;
       if (!collection) {
         collection = mediator.banners;
       }
       collection.fetch();
-      this.model = collection.get(id);
+      model = collection.get(id);
       return this.view = new BannerPage({
-        model: this.model
+        model: model
       });
     };
 
@@ -206,6 +205,41 @@ window.require.define({"controllers/base/controller": function(exports, require,
     return Controller;
 
   })(Chaplin.Controller);
+  
+}});
+
+window.require.define({"controllers/header_controller": function(exports, require, module) {
+  var Controller, Header, HeaderController, HeaderView, mediator,
+    __hasProp = {}.hasOwnProperty,
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+
+  Controller = require('controllers/base/controller');
+
+  mediator = require('mediator');
+
+  Header = require('models/header');
+
+  HeaderView = require('views/header_view');
+
+  module.exports = HeaderController = (function(_super) {
+
+    __extends(HeaderController, _super);
+
+    function HeaderController() {
+      return HeaderController.__super__.constructor.apply(this, arguments);
+    }
+
+    HeaderController.prototype.initialize = function() {
+      HeaderController.__super__.initialize.apply(this, arguments);
+      this.model = new Header();
+      return this.view = new HeaderView({
+        model: this.model
+      });
+    };
+
+    return HeaderController;
+
+  })(Controller);
   
 }});
 
@@ -844,6 +878,15 @@ window.require.define({"models/header": function(exports, require, module) {
       return Header.__super__.constructor.apply(this, arguments);
     }
 
+    Header.prototype.defaults = {
+      items: [
+        {
+          href: '#banners',
+          title: 'Main page'
+        }
+      ]
+    };
+
     return Header;
 
   })(Model);
@@ -919,7 +962,12 @@ window.require.define({"views/banner_item": function(exports, require, module) {
       var collection;
       collection = this.model.collection;
       this.model.bind("remove", function() {
-        return this.destroy();
+        var _this = this;
+        return this.destroy({
+          success: function() {
+            return alert(model, resp, options);
+          }
+        });
       });
       return collection.remove(this.model);
     };
@@ -964,10 +1012,14 @@ window.require.define({"views/banner_new_view": function(exports, require, modul
     };
 
     BannerNewView.prototype.addNewBanner = function() {
-      var name;
+      var name,
+        _this = this;
       name = this.$el.find(".name").val();
       this.collection.create({
-        name: name
+        name: name,
+        success: function(model, resp, options) {
+          return alert(model, resp, options);
+        }
       });
       this.collection;
       return false;
@@ -1025,9 +1077,10 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
     };
 
     BannerPageView.prototype.save = function() {
-      var otherName, otherView, self, values, _ref;
+      var otherName, otherView, result, self, serialize, values, _ref;
       values = new Array();
       self = this;
+      serialize = new Array();
       $(this.$el.find(".modelInput")).each(function() {
         values.push();
         if ($(this).val() || $(this).val() === 0) {
@@ -1037,8 +1090,11 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
       _ref = this.subviewsByName;
       for (otherName in _ref) {
         otherView = _ref[otherName];
-        otherView.saveRule();
+        result = otherView.saveRule();
+        serialize.push("" + otherName + ":" + result);
       }
+      $("#serialized").html(serialize.join(";"));
+      $(".serialized").show();
       this.model.set("rules", null);
       return this.model.save();
     };
@@ -1062,7 +1118,7 @@ window.require.define({"views/banner_page_view": function(exports, require, modu
       delete rules.name;
       delete rules.price;
       delete rules.vendor;
-      delete rules.count;
+      delete rules.counter;
       return this.model.set("rules", rules);
     };
 
@@ -1613,7 +1669,8 @@ window.require.define({"views/rule/countries_view": function(exports, require, m
       values = $(this.$el.find("#countyHidden")).val();
       this.model.set(this.options.rule, values);
       this.model.set("rules", null);
-      return this.model.save();
+      this.model.save();
+      return values;
     };
 
     countriesView.prototype.getTemplateData = function() {
@@ -1674,7 +1731,8 @@ window.require.define({"views/rule/date_view": function(exports, require, module
       date = this.$el.find(".datepicker").datetimepicker("getDate").getTime() / 1000;
       this.model.set(this.options.rule, date);
       this.model.set("rules", null);
-      return this.model.save();
+      this.model.save();
+      return date;
     };
 
     dateView.prototype.getTemplateData = function() {
@@ -1764,7 +1822,8 @@ window.require.define({"views/rule/days_view": function(exports, require, module
       });
       this.model.set(this.options.rule, values.join());
       this.model.set("rules", null);
-      return this.model.save();
+      this.model.save();
+      return values.join();
     };
 
     daysView.prototype.getTemplateData = function() {
@@ -1836,7 +1895,8 @@ window.require.define({"views/rule/hours_view": function(exports, require, modul
       });
       this.model.set(this.options.rule, values.join());
       this.model.set("rules", null);
-      return this.model.save();
+      this.model.save();
+      return values.join();
     };
 
     hoursView.prototype.getTemplateData = function() {
@@ -1886,7 +1946,9 @@ window.require.define({"views/rule/platforms_view": function(exports, require, m
         _this = this;
       platformsView.__super__.initialize.apply(this, arguments);
       if (!this.options["new"]) {
-        array = this.model.get(this.options.rule).split(",");
+        if (this.model.get(this.options.rule)) {
+          array = this.model.get(this.options.rule).split(",");
+        }
         _.each(array, function(val) {
           return _.each(_this.defaults, function(defval, defkey) {
             if (_this.defaults[defkey].name === val) {
@@ -1912,7 +1974,8 @@ window.require.define({"views/rule/platforms_view": function(exports, require, m
       });
       this.model.set(this.options.rule, values.join());
       this.model.set("rules", null);
-      return this.model.save();
+      this.model.save();
+      return values.join();
     };
 
     platformsView.prototype.getTemplateData = function() {
@@ -2029,7 +2092,7 @@ window.require.define({"views/templates/banner_page": function(exports, require,
     stack1 = foundHelper || depth0.count;
     if(typeof stack1 === functionType) { stack1 = stack1.call(depth0, { hash: {} }); }
     else if(stack1=== undef) { stack1 = helperMissing.call(depth0, "count", { hash: {} }); }
-    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n		<div class=\"btn-group\" id=\"add_rule_button\">\n			<button class=\"btn btn-large\">Add rule</button>\n			<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n				<span class=\"caret\"></span>\n			</button>\n			<ul class=\"dropdown-menu\">\n				<li><a href=\"#time_start\">Time start</a></li>\n				<li><a href=\"#time_end\">Time end</a></li>\n				<li><a href=\"#hours\">Hours</a></li>\n				<li><a href=\"#days\">Days</a></li>\n				<li><a href=\"#countries\">Countries</a></li>\n				<li><a href=\"#platforms\">Platforms</a></li>\n			</ul>\n		</div>\n		<div id=\"accordion\">\n		</div>\n	<div class=\"form-actions\">\n		<button type=\"button\" class=\"save btn btn-primary\">Save changes</button>\n		<button type=\"button\" class=\"cancel btn\">Cancel</button>\n	</div>\n\n\n\n</form>";
+    buffer += escapeExpression(stack1) + "\">\n		</div>\n	</div>\n	<div class=\"control-group serialized\"  style=\"display: none;\">\n		<label class=\"control-label\" for=\"serialized\">result</label>\n		<div class=\"controls\">\n			<textarea class=\"\"  name=\"serialized\" id=\"serialized\" />\n		</div>\n	</div>\n		<div class=\"btn-group\" id=\"add_rule_button\">\n			<button class=\"btn btn-large\">Add rule</button>\n			<button class=\"btn btn-large dropdown-toggle\" data-toggle=\"dropdown\">\n				<span class=\"caret\"></span>\n			</button>\n			<ul class=\"dropdown-menu\">\n				<li><a href=\"#time_start\">Time start</a></li>\n				<li><a href=\"#time_end\">Time end</a></li>\n				<li><a href=\"#hours\">Hours</a></li>\n				<li><a href=\"#days\">Days</a></li>\n				<li><a href=\"#countries\">Countries</a></li>\n				<li><a href=\"#platforms\">Platforms</a></li>\n			</ul>\n		</div>\n		<div id=\"accordion\">\n		</div>\n	<div class=\"form-actions\">\n		<button type=\"button\" class=\"save btn btn-primary\">Save changes</button>\n		<button type=\"button\" class=\"cancel btn\">Cancel</button>\n	</div>\n\n\n\n</form>";
     return buffer;});
 }});
 
@@ -2039,7 +2102,7 @@ window.require.define({"views/templates/banners": function(exports, require, mod
     var foundHelper, self=this;
 
 
-    return "<h3>Banners:</h3>\n<table class=\"table table-striped\">\n	<caption>Banners view</caption>\n	<thead>\n	<tr>\n		<th>Name</th>\n		<th>Vendor</th>\n		<th>Time_end</th>\n		<th>Time_end</th>\n		<th>Hours</th>\n		<th>Countries</th>\n		<th>Platforms</th>\n		<th>Counter</th>\n		<th>Price</th>\n		<th>Remove</th>\n	</tr>\n	</thead>\n	<tbody id=\"bannersPH\">\n	</tbody>\n</table>\n<button class=\"btn btn-large btn-primary\" type=\"button\" id=\"createBanner\">Create new Banner</button>\n\n";});
+    return "<h3>Banners:</h3>\n<table class=\"table table-striped\">\n	<thead>\n	<tr>\n		<th>Name</th>\n		<th>Vendor</th>\n		<th>Time_end</th>\n		<th>Time_end</th>\n		<th>Hours</th>\n		<th>Countries</th>\n		<th>Platforms</th>\n		<th>Counter</th>\n		<th>Price</th>\n		<th>Remove</th>\n	</tr>\n	</thead>\n	<tbody id=\"bannersPH\">\n	</tbody>\n</table>\n<button class=\"btn btn-large btn-primary\" type=\"button\" id=\"createBanner\">Create new Banner</button>\n\n";});
 }});
 
 window.require.define({"views/templates/header": function(exports, require, module) {

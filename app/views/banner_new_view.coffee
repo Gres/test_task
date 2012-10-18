@@ -14,6 +14,8 @@ module.exports = class BannerNewView extends View
 		name=@$el.find(".name").val()
 		@collection.create(
 			name:name
+			success:(model, resp, options)=>
+				alert(model, resp, options)
 		)
 		@collection
 		false

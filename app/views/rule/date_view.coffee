@@ -27,6 +27,6 @@ module.exports = class dateView extends View
 		@model.set(@options.rule,date)
 		@model.set("rules",null)
 		@model.save();
-
+		date
 	getTemplateData: ->
 		@data

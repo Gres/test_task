@@ -16,7 +16,8 @@ module.exports = class BannerItem extends View
 
 		collection=@model.collection
 		@model.bind("remove", ->
-			@destroy()
+			@destroy(success:=>
+				alert(model, resp, options))
 		)
 		collection.remove(@model)
 

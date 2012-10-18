@@ -36,6 +36,7 @@ module.exports = class hoursView extends View
 		@model.set(@options.rule,values.join())
 		@model.set("rules",null)
 		@model.save();
+		values.join()
 
 	getTemplateData: ->
 		@data
